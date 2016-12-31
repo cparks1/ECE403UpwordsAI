@@ -40,6 +40,9 @@ At the end of the game, to begin a new game you must close the tournament adjudi
 
 
 CREDITS:
+
 Credit to Christopher Parks (cparks13@live.com) for AI play logic and GUI, Tournament Adjudicator communications, and etc.
+
 Credit to William Ryan for scoring logic.
+
 Credit to Samuel Freitas for Tournament Adjudicator communications
