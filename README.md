@@ -53,8 +53,11 @@ moves. This is not for tournament use.
 • "TRIGGERED" was used to cause a breakpoint in a function I was trying to write to fire. It currently does nothing.
 
 When using the AI with the tournament adjudicator, you must have at least 2 clients connect to the adjudicator program. Once at least 2 clients have joined, the adjudicator will wait for a cetain amount of time for any new clients to join and then begin the game.
+
 Once the game has begun, the AI will not display its retrieved game state until it is the AI's turn.
+
 Once it is the AI's turn, you may choose which route to go: fully autonomous or semi-autonomous.
+
 At the end of the game, to begin a new game you must close the tournament adjudicator and then close all connected clients. You can then open a new tournament adjudicator and begin the connection process again.
 
 
