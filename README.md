@@ -13,6 +13,7 @@ Dictionary format is as such: Words must be capitalized, must contain ONLY lette
 If this is not done, the program will throw an exception for an invalid path to the dictionary file.
 
 Using the AI:
+
 • The 10x10 matrix of boxes in the left hand side of the GUI is the game board. It will contain tiles placed and tell you their stack level. The letter placed is drawn in black. The stack level is drawn in red.
 • The row of 7 boxes under the game board is the AI's tile hand. It will contain tiles given to you that can be used for play.
 • Clicking on the boxes in the game board or AI tile hand will open a dialogue asking for you to set the tile. Typing a letter and clicking OK will change the tile. If you do this on the game board, the new tile will have a stack level of 0. Clicking cancel will cancel the operation. This change only occurs on client side.
