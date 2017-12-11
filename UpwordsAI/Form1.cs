@@ -29,6 +29,8 @@ using System.Threading.Tasks;
 //         Add scoring calculator. 'Qu' moves are 2 bonus points if not stacking, but no bonus if stacking
 //                                  Additionally, if you can play all 7 tiles at once you get 20 points (7 letter words can ONLY be played after the first turn, as a connecting move)
 //                                  Stacking : 
+//
+// 12/9, 12/10/17: Began making portions of the code more readable by making it more object oriented. (Created Tile and GraphicTile objects, converted AI tile hand to use those instead of two arrays)
 
 namespace UpwordsAI
 {
@@ -60,8 +62,7 @@ namespace UpwordsAI
         char[,] tilesc = new char[10, 10]; // Array of 10 rows, 10 columns of tiles readable by machine
         int[,] stacklev = new int[10, 10]; // Array of 10 rows, 10 columns of the stack level of the tiles on the gameboard
 
-        PictureBox[] AI_tiles = new PictureBox[7]; // Array of 7 tiles to be held by the AI
-        char[] AI_Letters = new char[7]; // List that will contain the letters used by the AI. Upwords, when played, gives each player 7 tiles each turn.
+        GraphicTile[] AI_tiles = new GraphicTile[7]; // Array of 7 tiles to be held by the AI
 
 
         bool firstturn = true; // Boolean that determines if the AI will follow special rules for placing the first word.
@@ -111,15 +112,10 @@ namespace UpwordsAI
             int xpos = tiles[9, 1].Left + 16, ypos = tiles[9, 1].Bottom + 32;
             for (int i = 0; i < AI_tiles.Length; i++)
             {
-                AI_tiles[i] = new PictureBox();
-                AI_tiles[i].Location = new Point(xpos, ypos);
-                AI_tiles[i].Size = new Size(32, 32);
-                AI_tiles[i].Image = new Bitmap(32, 32);
-                AI_tiles[i].Tag = i.ToString();
-                AI_tiles[i].MouseClick += Tile_Click;
-                Controls.Add(AI_tiles[i]);
-                DrawText(ref AI_tiles[i], BLANK_LETTER, 0);
-                AI_Letters[i] = BLANK_LETTER;
+                Point location = new Point(xpos, ypos);
+                AI_tiles[i] = new GraphicTile(location, i.ToString());
+                Controls.Add(AI_tiles[i].tile_box);
+                AI_tiles[i].DrawTile(BLANK_LETTER, 0);
                 xpos += 33;
             }
 
@@ -555,12 +551,12 @@ namespace UpwordsAI
             {
                 if (c == given) // This if statement takes into account the fact that we don't need the tile we're playing off of to play a word.
                 {
-                    if (w.Count(x => x == c) - 1 > AI_Letters.Count(x => x == c)) // Ensures AI has the tiles needed to play this word
+                    if (w.Count(x => x == c) - 1 > AI_tiles.Count(x => x.letter_value == c)) // Ensures AI has the tiles needed to play this word
                         return false;// Word unplayable, not enough tiles
                 }
                 else
                 {
-                    if (w.Count(x => x == c) > AI_Letters.Count(x => x == c)) // Ensures AI has the tiles needed to play this word
+                    if (w.Count(x => x == c) > AI_tiles.Count(x => x.letter_value == c)) // Ensures AI has the tiles needed to play this word
                         return false;// Word unplayable, not enough tiles
                 }
             }
@@ -572,12 +568,12 @@ namespace UpwordsAI
             {
                 if (given.Contains(c)) // This if statement takes into the account that we don't need the tiles we're playing off of to play a word.
                 {
-                    if (w.Count(x => x == c) - given.Count(x => x == c) > AI_Letters.Count(x => x == c)) // Ensures the AI has the tiles needed to play this word
+                    if (w.Count(x => x == c) - given.Count(x => x == c) > AI_tiles.Count(x => x.letter_value == c)) // Ensures the AI has the tiles needed to play this word
                         return false; // Word unplayable because even with the given characters, the AI still doesn't have enough tiles to play the word
                 }
                 else // New tile required for a word play
                 {
-                    if (w.Count(x => x == c) > AI_Letters.Count(x => x == c)) // Ensures AI has the tiles needed to play this word
+                    if (w.Count(x => x == c) > AI_tiles.Count(x => x.letter_value == c)) // Ensures AI has the tiles needed to play this word
                         return false;// Word unplayable, not enough tiles
                 }
             }
@@ -648,14 +644,13 @@ namespace UpwordsAI
 
         private void AI_PlaceTile(char c, int[] pos, bool update=false) // position array assumes form of { row, column }
         { // CAP : Update function to handle stacking
-            if (AI_Letters.Contains(c))
+            if (AI_tiles.Select(x=>x.letter_value).Contains(c)) // If the AI has a tile containing the character specified by c
             {
                 SetTile(pos, c, stacklev[pos[0], pos[1]] + 1); // CAP : Eventually update this to retrieve the current stack # and increment it
                 if (!update)
                 {
-                    int li = Array.IndexOf(AI_Letters, c); // Letter index
-                    DrawText(ref AI_tiles[li], BLANK_LETTER, -1);
-                    AI_Letters[li] = BLANK_LETTER;
+                    int letter_index = AI_tiles.ToList().FindIndex(x => x.letter_value == c);
+                    AI_tiles[letter_index].DrawTile(BLANK_LETTER, -1);  // Remove the tile being placed from the AI's letter hand
                 }
             }
         }
@@ -769,21 +764,22 @@ namespace UpwordsAI
         {
             GiveAITiles();
         }
+        /// <summary>
+        /// Gives the AI tiles from a local tile bag. Not to be used in tournament plays.
+        /// </summary>
         private void GiveAITiles()
         {
-            for (int i = 0; i < AI_Letters.Length; i++) // iterate through the AI's given letters
-                if (AI_Letters[i] == BLANK_LETTER) // Only interested in blank tiles
+            if(Tile_Bag.Count > 0)
+            {
+                foreach (GraphicTile ai_tile in AI_tiles.Where(x => x.IsBlank)) // Iterate through all of the AI's tile openings
                 {
-                    //char newc = (char)rand.Next('A', 'Z');
-                    if (Tile_Bag.Count > 0)
-                    {
-                        char newc = Tile_Bag.Pop();
-                        AI_Letters[i] = newc;// Give the AI a random character tile between A and Z. (Tile Bag is shuffled when it is reset, so tiles are random)
-                        DrawText(ref AI_tiles[i], newc, -1);
-                    }
-                    else
-                        MessageBox.Show("The tile bag is empty.", "No more tiles");
+                    ai_tile.DrawTile(Tile_Bag.Pop(), -1); // Grab a tile from the tile bag, give it to the AI, and draw the AI tile hand.
                 }
+            }
+            else
+            {
+                MessageBox.Show("The tile bag is empty.", "No more tiles");
+            }
         }
 
         private void aiplacewordBUT_Click(object sender, EventArgs e)
@@ -809,11 +805,8 @@ namespace UpwordsAI
         { ClearAITiles(); }
         private void ClearAITiles()
         {
-            for (int i = 0; i < AI_Letters.Length; i++)
-            {
-                AI_Letters[i] = BLANK_LETTER;
-                DrawText(ref AI_tiles[i], BLANK_LETTER, -1);
-            }
+            foreach (GraphicTile ai_tile in AI_tiles)
+                ai_tile.DrawTile(BLANK_LETTER, -1);
         }
 
         private void clearboardBUT_Click(object sender, EventArgs e)
@@ -857,16 +850,14 @@ namespace UpwordsAI
                 if (m.Button == MouseButtons.Left) // Set the tile to something else
                 {
                     char let = GetNewChar();
-                    if (let >= 'A' && let <= 'Z')
+                    if (char.IsUpper(let))  // Validate user input. Must be [A-Z]
                     {
-                        AI_Letters[pos] = let;
-                        DrawText(ref AI_tiles[pos], let, -1);
+                        AI_tiles[pos].DrawTile(let, -1);
                     }
                 }
                 else if (m.Button == MouseButtons.Right) // Clear the tile
                 {
-                    AI_Letters[pos] = BLANK_LETTER; // Set the character value to blank
-                    DrawText(ref AI_tiles[pos], BLANK_LETTER, -1); // Draw it blank
+                    AI_tiles[pos].DrawTile(BLANK_LETTER, -1);
                 }
             }
         }
@@ -1148,16 +1139,16 @@ namespace UpwordsAI
         /// <returns></returns>
         public bool ContainsEnoughLetters(string word, string oldword) // Function allows us to tell if given n wildcards, whether or not we can play this word
         { // If using this function to determine if a new word can be played in a stack play, make sure n is less than or equal to the previous word length minus 1. You cannot cover all tiles in one play.
-            int discrepencies = 0;
+            int discrepencies = 0;  // Number of character differences between word and oldword
             if (word == oldword)
                 return false;
-            if (word.Length == oldword.Length)
+            if (word.Length == oldword.Length) // Word lengths must be the same to play word on top of oldword
             {
                 for (int i = 0; i < word.Length; i++)
                 {
                     if (word[i] != oldword[i])
                     {
-                        if (AI_Letters.Count(x => x == word[i]) < word.Count(x => x == word[i])) // If the AI has less tiles of this kind than is required to play the new word
+                        if (AI_tiles.Count(x => x.letter_value == word[i]) < word.Count(x => x == word[i])) // If the AI has less tiles of this kind than is required to play the new word
                             return false; // Then we can't play the word
                         discrepencies++;
                     }
@@ -1223,10 +1214,13 @@ namespace UpwordsAI
                 System.Diagnostics.Stopwatch stpw = new System.Diagnostics.Stopwatch();
                 stpw.Start();
 
+                string tile_hand = new string(AI_tiles.Select(x=>x.letter_value).ToArray()); // Convert the AI's tile letters to a printable string
+                string message = $"TILE HAND: {tile_hand}\r\n";
+
                 if (logboxTB.InvokeRequired)
-                    logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += "TILE HAND: " + new string(AI_Letters) + "\r\n"; }));
+                    logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += message; }));
                 else
-                    logboxTB.Text += "TILE HAND: " + new string(AI_Letters) + "\r\n";
+                    logboxTB.Text += message;
 
                 if (firstturn) // If the AI is taking the first turn
                 {
@@ -1365,23 +1359,11 @@ namespace UpwordsAI
 
         private void SetAITournamentTiles(string[] tiles)
         {
-            /*if(tiles.Length < AI_Letters.Length)
-            {
-                string[] temp = new string[7];
-                int i;
-                for(i=0; i<tiles.Length; i++)
-                    temp[i] = tiles[i];
-                for (i = i; i < AI_Letters.Length; i++)
-                    temp[i] = null;
-                tiles = temp;
-            }*/
             if(tiles!=null && tiles.Length > 0)
-                for (int i = 0; i < AI_Letters.Length; i++) // iterate through the AI's given letters                  
+                for (int i = 0; i < AI_tiles.Length; i++) // iterate through the AI's given letters                  
                 {
-                    char newc = (tiles.Length == AI_Letters.Length) ? (tiles[i] != null) ? tiles[i][0] : BLANK_LETTER : BLANK_LETTER;
-                    //char newc = (tiles[i] != null) ? tiles[i][0] : BLANK_LETTER;
-                    AI_Letters[i] = newc;// Give the AI a random character tile between A and Z. (Tile Bag is shuffled when it is reset, so tiles are random)
-                    DrawText(ref AI_tiles[i], newc, -1);
+                    char newc = (tiles.Length == AI_tiles.Length) ? (tiles[i] != null) ? tiles[i][0] : BLANK_LETTER : BLANK_LETTER; // Handle any possible errors in transmission
+                    AI_tiles[i].DrawTile(newc, -1); // Give the AI the tile we're currently looking at, and draw it.
                 }
         }
 
