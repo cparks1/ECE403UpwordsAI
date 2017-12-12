@@ -1,10 +1,9 @@
-# ECE403UpwordsAI
-This repository contains the source code for an Artificial Intelligence capable of playing Hasbro's board game "Upwords". It was created for a project in an undergraduate Artificial Intelligence class.
-This Artificial Intelligence was created using C# as the programming language. It uses HTTP Requests and JSON for communications with the tournament adjudicator program.
+# Upwords AI
+This repository contains the source code for an Artificial Intelligence capable of playing Hasbro's board game "Upwords". It was created for a project in Lance Fiondella's undergraduate Artificial Intelligence class (ECE 403) at UMass Dartmouth.
 
-This AI I've created was made to use with a "Tournament Adjudicator". The tournament adjudicator repository can be found at https://github.com/bdavs/TournamentAdjudicator
+The project is pure C# and uses REST for communications with the tournament adjudicator program. The tournament adjudicator repository can be found at https://github.com/bdavs/TournamentAdjudicator. I've also forked that repository on my GitHub profile.
 
-This project was coded quickly without regard to code organization, so as of now (12/31/16) the code is a bit disorganized and hard to follow. I plan to fix this in the future, when I have time to. If you have any questions do not hesitate to contact or email me.
+This project was coded quickly without regard to code organization, so as of now (12/31/16) the code is a bit disorganized and hard to follow. I am now (as of 12/11/17) making some effort to make the code more user friendly. If you have any questions do not hesitate to contact or email me.
 
 
 Opening the AI:
@@ -63,7 +62,7 @@ At the end of the game, to begin a new game you must close the tournament adjudi
 
 CREDITS:
 
-Credit to Christopher Parks (cparks13@live.com) for AI play logic and GUI, Tournament Adjudicator communications, and etc.
+Credit to Christopher Parks (cparks13@live.com) for AI play logic, GUI, Tournament Adjudicator communications, and other functions.
 
 Credit to William Ryan for scoring logic.
 
