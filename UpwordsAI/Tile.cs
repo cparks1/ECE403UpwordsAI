@@ -1,6 +1,6 @@
 ﻿namespace UpwordsAI
 {
-    class Tile
+    public class Tile
     {
         public static char BLANK_LETTER = '~';
 

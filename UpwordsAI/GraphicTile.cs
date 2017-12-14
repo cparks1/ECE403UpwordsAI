@@ -9,7 +9,7 @@ using System.Windows.Forms;
 
 namespace UpwordsAI
 {
-    class GraphicTile:Tile
+    public class GraphicTile:Tile
     {
         public static Size tile_size = new Size(32, 32);
         public string tag = "";
@@ -22,11 +22,20 @@ namespace UpwordsAI
             tile_box.MouseClick += Tile_Click;
         }
 
-        public GraphicTile(Point location, string index_tag):this()
+        /// <summary>
+        /// Constructor function used to create a graphic tile object that will be displayed on the GUI
+        /// </summary>
+        /// <param name="location">Coordinate location of the tile on the form GUI</param>
+        /// <param name="index_tag">Tag used to find and access specific tiles</param>
+        /// <param name="is_gameboard_tile">Whether or not the tile is being used for the game board or the AI's tile hand. Determines which functions will be called upon clicking and mousing over the tile.</param>
+        public GraphicTile(Point location, string index_tag, bool is_gameboard_tile):this()
         {
             tile_box.Location = location;
             tile_box.Image = new Bitmap(tile_size.Width, tile_size.Height);
             tag = index_tag;
+
+            if (is_gameboard_tile)
+                tile_box.MouseEnter += Tile_Mouse_Enter;
         }
 
         public void DrawTile()
@@ -89,6 +98,11 @@ namespace UpwordsAI
             }
             else if (m.Button == MouseButtons.Right)
                 DrawTile(BLANK_LETTER, new_stack_level);
+        }
+
+        private void Tile_Mouse_Enter(object sender, EventArgs e)
+        {
+            ((sender as PictureBox).Parent as Form1).MouseposLBL_text = $"Position: {this.tag}";
         }
 
         public char GetNewChar()

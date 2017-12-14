@@ -319,7 +319,6 @@
         private System.Windows.Forms.Button aiplacewordBUT;
         private System.Windows.Forms.Button clearaitilesBUT;
         private System.Windows.Forms.Button clearboardBUT;
-        private System.Windows.Forms.Label mouseposLBL;
         private System.Windows.Forms.Button aiplayallBUT;
         private System.Windows.Forms.TextBox logboxTB;
         private System.Windows.Forms.Button resetgameBUT;
@@ -336,6 +335,7 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Label tournamentscoreLBL;
         private System.Windows.Forms.Button sendonemoveBUT;
+        private System.Windows.Forms.Label mouseposLBL;
     }
 }
 
