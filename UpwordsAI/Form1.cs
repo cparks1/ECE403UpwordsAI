@@ -60,7 +60,7 @@ namespace UpwordsAI
 
         GraphicTile[,] gameboard = new GraphicTile[10, 10]; // 10x10 array of tiles visible to humans that stores data on the character and stack level of that tile.
         //char[,] tilesc = new char[10, 10]; // Array of 10 rows, 10 columns of tiles readable by machine
-        int[,] stacklev = new int[10, 10]; // Array of 10 rows, 10 columns of the stack level of the tiles on the gameboard
+        //int[,] stacklev = new int[10, 10]; // Array of 10 rows, 10 columns of the stack level of the tiles on the gameboard
 
         GraphicTile[] AI_tiles = new GraphicTile[7]; // Array of 7 tiles to be held by the AI
 
@@ -105,7 +105,7 @@ namespace UpwordsAI
                     //NOTE: tilesc[r, c] = BLANK_LETTER;
                     xpos += 33;
 
-                    stacklev[r, c] = 0;
+                    //NOTE: stacklev[r, c] = 0;
                 }
                 ypos += 33;
             }
@@ -238,7 +238,7 @@ namespace UpwordsAI
         public void SetTile(int[] pos, char letter, int stack) // Draws the tile, and sets it. Pos follows the expected form of { row, column }.
         {
             //NOTE: tilesc[pos[0], pos[1]] = letter;
-            stacklev[pos[0], pos[1]] = stack;
+            //NOTE: stacklev[pos[0], pos[1]] = stack;
             //DrawText(ref tiles[pos[0], pos[1]], letter, stack);
             gameboard[pos[0], pos[1]].DrawTile(letter, (sbyte)stack);
         }
@@ -665,7 +665,10 @@ namespace UpwordsAI
         { // CAP : Update function to handle stacking
             if (AI_tiles.Select(x=>x.letter_value).Contains(c)) // If the AI has a tile containing the character specified by c
             {
-                SetTile(pos, c, stacklev[pos[0], pos[1]] + 1); // CAP : Eventually update this to retrieve the current stack # and increment it
+                GraphicTile selected_tile = gameboard[pos[0], pos[1]];
+                selected_tile.DrawTile(c, (sbyte)(selected_tile.stack_value + 1));
+
+                //NOTE: SetTile(pos, c, stacklev[pos[0], pos[1]] + 1); // CAP : Eventually update this to retrieve the current stack # and increment it
                 if (!update)
                 {
                     int letter_index = AI_tiles.ToList().FindIndex(x => x.letter_value == c);
@@ -839,67 +842,11 @@ namespace UpwordsAI
             firstturn = true;
         }
 
-        private void tilePB_MouseEnter(object sender, EventArgs e)
-        {
-            mouseposLBL.Text = "Position: " + ((sender as PictureBox).Tag as string);
-        }
-
         /// <summary>
         /// Public accessor for working with the mouseposLBL's text
         /// </summary>
         public string MouseposLBL_text
         { get { return mouseposLBL.Text; } set { mouseposLBL.Text = value; } }
-
-
-        private void Tile_Click(object sender, EventArgs e) // Allows user to manually edit tiles
-        {
-            PictureBox tile = sender as PictureBox;
-            MouseEventArgs m = e as MouseEventArgs;
-            bool IsBoardTile = (tile.Tag.ToString().Contains(',')) ? true : false; // The tags for the board tiles contain a comma to give you their (r,c) position. The AI tiles simply give you their 1d index.
-            if (IsBoardTile) // Separate code for AI letter hand and board tiles due to difference in array positioning (1D vs 2D)
-            {
-                string[] spos = tile.Tag.ToString().Replace("(", "").Replace(")", "").Split(','); // Format the string into a 2d array with the separate coordinates
-                int[] pos = new int[] { int.Parse(spos[0]), int.Parse(spos[1]) }; // Parse the coordinates
-
-                if (m.Button == MouseButtons.Left) // Set the tile to something else
-                {
-                    char let = GetNewChar();
-                    if (let >= 'A' && let <= 'Z')
-                        SetTile(pos, let, 0);
-                }
-                else if (m.Button == MouseButtons.Right) // Clear the tile
-                    SetTile(pos, BLANK_LETTER, 0);
-            }
-            else
-            {
-                int pos = int.Parse(tile.Tag.ToString());
-                if (m.Button == MouseButtons.Left) // Set the tile to something else
-                {
-                    char let = GetNewChar();
-                    if (char.IsUpper(let))  // Validate user input. Must be [A-Z]
-                    {
-                        AI_tiles[pos].DrawTile(let, -1);
-                    }
-                }
-                else if (m.Button == MouseButtons.Right) // Clear the tile
-                {
-                    AI_tiles[pos].DrawTile(BLANK_LETTER, -1);
-                }
-            }
-        }
-
-        public char GetNewChar()
-        {
-
-            using (Form2 testDialog = new Form2())
-            {
-                testDialog.ShowDialog();
-                if (testDialog.goodclose == true)
-                    return testDialog.TextBox1.Text[0];
-                else
-                    return '!'; // It returns this to signify an error occurred. If it sent '~' the tile would be set to blank, which may not be desired.
-            }
-        }
 
         List<PlacedWord> FindWordsOnBoard() // This function finds all the words placed on the board and compiles them into a list. Will later be used to figure out where we can stack tiles
         { // CAP : This function was written mostly while I was drinking so there may be some unforseen issues
@@ -1113,13 +1060,13 @@ namespace UpwordsAI
                 if (p.dir) // This if statement will prevent any words that would cause a stack level higher than 5 from being played.
                 {
                     for (int r = p.row; r < p.row + p.Length; r++)
-                        if (stacklev[r, p.column] >= 5)
+                        if (gameboard[r, p.column].stack_value >= 5)
                             words.RemoveAll(x => x[r - p.row] != p.word[r - p.row]);
                 }
                 else
                 {
                     for (int c = p.column; c < p.column + p.Length; c++)
-                        if (stacklev[p.row, c] >= 5)
+                        if (gameboard[p.row, c].stack_value >= 5)
                             words.RemoveAll(x => x[c - p.column] != p.word[c - p.column]);
                 }
 
@@ -1256,7 +1203,9 @@ namespace UpwordsAI
                     firstturn = false;
                 }
                 else
+                {
                     word = FindNextMove2();
+                }
 
                 if (word != BLANK_LETTER.ToString())
                 {
@@ -1475,14 +1424,14 @@ namespace UpwordsAI
 
                             if (rstart != -1 && rend != -1 && rstart != rend) // If we can make a vertical word
                             {
-                                PossibleWordPlacements.Add(new PossibleWordPlacement(true, gameboard[r, c].letter_value, stacklev[r, c], r, c, rstart, rend)); // Add the word to the list of possible word plays
+                                PossibleWordPlacements.Add(new PossibleWordPlacement(true, gameboard[r, c].letter_value, gameboard[r, c].stack_value, r, c, rstart, rend)); // Add the word to the list of possible word plays
 
                                 List<char> lets = new List<char>(); lets.AddRange(rschars); lets.AddRange(rechars);
                                 NewPossibleWordPlacements.Add(new NewPossibleWordPlacement(true, lets, r, c, rows, rowe));
                             }
                             if (cstart != -1 && cend != -1 && cstart != cend) // If we can make a horizontal word
                             {
-                                PossibleWordPlacements.Add(new PossibleWordPlacement(false, gameboard[r, c].letter_value, stacklev[r, c], r, c, cstart, cend)); // Add the word to the list of possible word plays
+                                PossibleWordPlacements.Add(new PossibleWordPlacement(false, gameboard[r, c].letter_value, gameboard[r, c].stack_value, r, c, cstart, cend)); // Add the word to the list of possible word plays
 
                                 List<char> lets = new List<char>(); lets.AddRange(cschars); lets.AddRange(cechars);
                                 NewPossibleWordPlacements.Add(new NewPossibleWordPlacement(false, lets, r, c, cols, cole));
@@ -1549,15 +1498,15 @@ namespace UpwordsAI
                     }
 
                     if (p.dir) // This if statement will prevent any words that would cause a stack level higher than 5 from being played.
-                    {
+                    {           // NOTE: Why are any words that would cause a stack level >= 5 even being added in the first place?!?!
                         for (int r = p.row; r < p.row + p.Length; r++)
-                            if (stacklev[r, p.column] >= 5)
+                            if (gameboard[r, p.column].stack_value >= 5)
                                 words.RemoveAll(x => x[r - p.row] != p.word[r - p.row]);
                     }
                     else
                     {
                         for (int c = p.column; c < p.column + p.Length; c++)
-                            if (stacklev[p.row, c] >= 5)
+                            if (gameboard[p.row, c].stack_value >= 5)
                                 words.RemoveAll(x => x[c - p.column] != p.word[c - p.column]);
                     }
 
@@ -1611,14 +1560,14 @@ namespace UpwordsAI
             {
                 for (int rcount = s.r; rcount <= s.oldword.Length + s.r - 1; rcount++)
                 {
-                    stackscore += stacklev[rcount, s.c];
+                    stackscore += gameboard[rcount, s.c].stack_value;
                 }
             }
             else
             {
                 for (int ccount = s.c; ccount <= s.oldword.Length + s.c - 1; ccount++)
                 {
-                    stackscore += stacklev[s.r, ccount];
+                    stackscore += gameboard[s.r, ccount].stack_value;
                 }
             }
             int changes = NumberDifferentLetters(s.oldword, s.pwords[0]);
