@@ -1073,7 +1073,7 @@ namespace UpwordsAI
                 if (words.Count > 0)
                     PossibleStackPlays.Add(new PossibleWordStackPlacement(p.dir, p.row, p.column, p.word, words));
             }
-            PossibleStackPlays = PossibleStackPlays.OrderByDescending(x => NumberDifferentLetters(x.oldword, x.pwords[0])).ToList(); // Orders the list so the longest stack play is at the front
+            PossibleStackPlays = PossibleStackPlays.OrderByDescending(x => Utilities.NumberDifferentLetters(x.oldword, x.pwords[0])).ToList(); // Orders the list so the longest stack play is at the front
             if (PossibleStackPlays.Count > 0)
             {
                 AI_PlaceStack(PossibleStackPlays[0]);
@@ -1090,19 +1090,6 @@ namespace UpwordsAI
             sb[awdex] = checkword[wdex];
             aword = sb.ToString();
             return dictionary.Contains(aword);
-        }
-
-        public int NumberDifferentLetters(string word1, string word2)
-        {
-            if (word1.Length != word2.Length)
-                return -1;
-
-            int numdiff = 0;
-            for (int i = 0; i < word1.Length && i < word2.Length; i++)
-                if (word1[i] != word2[i])
-                    numdiff++;
-
-            return numdiff;
         }
 
         /// <summary>
@@ -1453,7 +1440,7 @@ namespace UpwordsAI
                 }
 
                 PossibleWordPlacements = PossibleWordPlacements.Where(x => x.playablewords.Count > 0).ToList(); // Trim any possible placements with 0 playable words
-                PossibleWordPlacements = PossibleWordPlacements.OrderByDescending(x => ScoreCalcReg(x)).ToList(); // Order the list so that the possible placements with the longest words are first
+                PossibleWordPlacements = PossibleWordPlacements.OrderByDescending(x => x.Score()).ToList(); // Order the list so that the possible placements with the longest words are first
 
                 int pregular;
                 PossibleWordPlacement pbestreg = null;
@@ -1462,8 +1449,7 @@ namespace UpwordsAI
                     pbestreg = PossibleWordPlacements[0];
                     if (pbestreg.playablewords.Count > 0) // We cannot place any words if there are no playable words (PossibleWordPlacements trims out the possible placements that had 0 playable words first)
                     {
-
-                        pregular = ScoreCalcReg(pbestreg);
+                        pregular = pbestreg.Score();
                     }
                     else
                         pregular = 0;
@@ -1513,13 +1499,13 @@ namespace UpwordsAI
                     if (words.Count > 0)
                         PossibleStackPlays.Add(new PossibleWordStackPlacement(p.dir, p.row, p.column, p.word, words));
                 }
-                PossibleStackPlays = PossibleStackPlays.OrderByDescending(x => StackScoreCalc(x)).ToList(); // Orders stack plays by score
+                PossibleStackPlays = PossibleStackPlays.OrderByDescending(x => x.Score(gameboard)).ToList(); // Orders stack plays by score
                 int beststackscore;
                 PossibleWordStackPlacement beststackselect = null;
                 if (PossibleStackPlays.Count > 0)
                 {
                     beststackselect = PossibleStackPlays[0];
-                    beststackscore = StackScoreCalc(beststackselect);
+                    beststackscore = beststackselect.Score(gameboard);
                 }
                 else
                 {
@@ -1553,46 +1539,6 @@ namespace UpwordsAI
             }
         }
 
-        private int StackScoreCalc(PossibleWordStackPlacement s) //Similar to ScoreCalcReg this calculates the score for a stack play based on the current stack level and the number of changes (increase score by 1 for each change)
-        {
-            int stackscore = 0;
-            if (s.dir)
-            {
-                for (int rcount = s.r; rcount <= s.oldword.Length + s.r - 1; rcount++)
-                {
-                    stackscore += gameboard[rcount, s.c].stack_value;
-                }
-            }
-            else
-            {
-                for (int ccount = s.c; ccount <= s.oldword.Length + s.c - 1; ccount++)
-                {
-                    stackscore += gameboard[s.r, ccount].stack_value;
-                }
-            }
-            int changes = NumberDifferentLetters(s.oldword, s.pwords[0]);
-            stackscore += (changes == 7) ? changes + 20 : changes; //Checks if the number of changes equals the number of tiles in hand (7) to determine full usage bonus
-            return stackscore;
-        }
-
-        private int ScoreCalcReg(PossibleWordPlacement p)
-        {
-            string w = p.playablewords[0];
-            int regscore = 0;
-            if (p.stacklev == 1)
-            {
-                if (w.Length > 7)
-                    regscore += (w.Contains('Q')) ? w.Length * 2 + 22 : w.Length * 2 + 20;
-                else
-                    regscore += (w.Contains('Q')) ? w.Length * 2 + 2 : w.Length * 2;
-            }
-            else
-            {
-                regscore += (w.Length > 7) ? w.Length - 1 + p.stacklev + 20 : w.Length - 1 + p.stacklev;
-            }
-            return regscore;
-        }
-
         private void aiplaybestBUT_Click(object sender, EventArgs e)
         {
             AIBestPlayChoice();
@@ -1610,13 +1556,6 @@ namespace UpwordsAI
 
         private void sendonemoveBUT_Click(object sender, EventArgs e)
         {
-            /*NOTE: g.PlayMove(stacklev, tilesc).GetAwaiter().OnCompleted(
-                delegate()
-                {
-                    //Thread.Sleep(100);
-                    GetGameState();
-                });*/
-
             g.PlayMove(gameboard).GetAwaiter().OnCompleted(
                 delegate ()
                 {

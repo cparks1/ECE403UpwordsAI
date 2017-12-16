@@ -61,7 +61,24 @@ namespace UpwordsAI
         public override string ToString()
         {
             return ((dir)?"VER":"HOR")+" : "+letter.ToString() + " (" + lrow.ToString() + "," + lcol.ToString() + ") S:" + start.ToString() + " E:" + end.ToString();
-            //return base.ToString();
+        }
+
+        public int Score()
+        {
+            string w = this.playablewords[0];   // Grab the best word from what should be a sorted array
+            int regscore = 0;                   // Initialize return score to 0
+            if (this.stacklev == 1)
+            {
+                if (w.Length > 7)
+                    regscore += (w.Contains('Q')) ? w.Length * 2 + 22 : w.Length * 2 + 20;
+                else
+                    regscore += (w.Contains('Q')) ? w.Length * 2 + 2 : w.Length * 2;
+            }
+            else
+            {
+                regscore += (w.Length > 7) ? w.Length - 1 + this.stacklev + 20 : w.Length - 1 + this.stacklev;
+            }
+            return regscore;
         }
     }
 
@@ -86,6 +103,33 @@ namespace UpwordsAI
             r = row; c = column;
             pwords = possiblewords;
             oldword = oword;
+        }
+
+        /// <summary>
+        /// Calculates and returns the score of this possible stack move.
+        /// </summary>
+        /// <param name="gameboard">The gameboard's current state.</param>
+        /// <returns>The number of points to be gained from playing this move.</returns>
+        public int Score(GraphicTile[,] gameboard) //Similar to ScoreCalcReg this calculates the score for a stack play based on the current stack level and the number of changes (increase score by 1 for each change)
+        {
+            int stackscore = 0;
+            if (this.dir)
+            {
+                for (int rcount = this.r; rcount <= this.oldword.Length + this.r - 1; rcount++)
+                {
+                    stackscore += gameboard[rcount, this.c].stack_value;
+                }
+            }
+            else
+            {
+                for (int ccount = this.c; ccount <= this.oldword.Length + this.c - 1; ccount++)
+                {
+                    stackscore += gameboard[this.r, ccount].stack_value;
+                }
+            }
+            int changes = Utilities.NumberDifferentLetters(this.oldword, this.pwords[0]);
+            stackscore += (changes == 7) ? changes + 20 : changes; //Checks if the number of changes equals the number of tiles in hand (7) to determine full usage bonus
+            return stackscore;
         }
     }
 
