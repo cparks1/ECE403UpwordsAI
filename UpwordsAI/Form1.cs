@@ -90,22 +90,10 @@ namespace UpwordsAI
                 for (int c = 0; c < 10; c++)
                 {
                     Point location = new Point(xpos, ypos);
-                    gameboard[r, c] = new GraphicTile(location, $"({r.ToString()},{c.ToString()})", true);
-                    Controls.Add(gameboard[r, c].tile_box);
-                    gameboard[r, c].DrawTile(BLANK_LETTER, 0);
-                    /*NOTE: tiles[r, c] = new PictureBox();
-                    tiles[r, c].Location = new Point(xpos, ypos);
-                    tiles[r, c].Size = new Size(32, 32);
-                    tiles[r, c].Image = new Bitmap(32, 32);
-                    tiles[r, c].Tag = "(" + r.ToString() + "," + c.ToString() + ")";
-                    tiles[r, c].MouseEnter += tilePB_MouseEnter;
-                    tiles[r, c].MouseClick += Tile_Click;
-                    Controls.Add(tiles[r, c]);
-                    DrawText(ref tiles[r, c], BLANK_LETTER, 0);*/
-                    //NOTE: tilesc[r, c] = BLANK_LETTER;
+                    gameboard[r, c] = new GraphicTile(location, $"({r.ToString()},{c.ToString()})", true); // (r,c)
+                    Controls.Add(gameboard[r, c].tile_box); // Add graphic tile's picturebox to form1's visible controls
+                    gameboard[r, c].DrawTile(BLANK_LETTER, 0); // Set this tile to a blank tile, and draw it.
                     xpos += 33;
-
-                    //NOTE: stacklev[r, c] = 0;
                 }
                 ypos += 33;
             }
@@ -116,7 +104,6 @@ namespace UpwordsAI
         /// </summary>
         public void InitializeAITiles()
         {
-            //NOTE: int xpos = tiles[9, 1].Left + 16, ypos = tiles[9, 1].Bottom + 32;
             int xpos = gameboard[9, 1].tile_box.Left + 16, ypos = gameboard[9, 1].tile_box.Bottom + 32;
             for (int i = 0; i < AI_tiles.Length; i++)
             {
@@ -235,11 +222,8 @@ namespace UpwordsAI
             pb.Image = bmp;
         }
 
-        public void SetTile(int[] pos, char letter, int stack) // Draws the tile, and sets it. Pos follows the expected form of { row, column }.
+        public void SetTile(int[] pos, char letter, int stack) // Sets the tile and draws it. Pos follows the expected form of { row, column }.
         {
-            //NOTE: tilesc[pos[0], pos[1]] = letter;
-            //NOTE: stacklev[pos[0], pos[1]] = stack;
-            //DrawText(ref tiles[pos[0], pos[1]], letter, stack);
             gameboard[pos[0], pos[1]].DrawTile(letter, (sbyte)stack);
         }
 
@@ -255,7 +239,6 @@ namespace UpwordsAI
                 regex = "";
 
                 for (int c = 0; c < 10; c++)
-                    //NOTE: regex += (tilesc[r, c] == BLANK_LETTER) ? '.' : tilesc[r, c]; // Generate a regex capable of search
                     regex += (gameboard[r, c].letter_value == BLANK_LETTER) ? '.' : gameboard[r, c].letter_value; // Generate a regex capable of search
 
                 bool hitlet = false; bool fronttrail = false;
@@ -287,7 +270,6 @@ namespace UpwordsAI
             {
                 regex = "";
                 for (int r = 0; r < 10; r++)
-                    //NOTE: regex += (tilesc[r, c] == BLANK_LETTER) ? '.' : tilesc[r, c]; // Generate a regex capable of search
                     regex += (gameboard[r, c].letter_value == BLANK_LETTER) ? '.' : gameboard[r, c].letter_value; // Generate a regex capable of search
                 bool hitlet = false; bool fronttrail = false;
                 for (int i = 0; i < 10 && !hitlet; i++)
@@ -321,28 +303,24 @@ namespace UpwordsAI
             rstarts = new List<int>(); // List that holds all the rstarting positions
             letters = new List<char>(); // List that holds all the letters we've run into
 
-            //NOTE: if (tilesc[r, c] != BLANK_LETTER) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
             if (!gameboard[r, c].IsBlank) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
             {
                 if (r - 1 >= 0) // If we can check ABOVE the tile we're currently searching (We do this check to avoid an out of bounds exception)
                 {
-                    //NOTE: if (tilesc[r - 1, c] == BLANK_LETTER) // This is part of the process of checking if we're able to build an entirely new vertical word.
                     if (gameboard[r - 1, c].IsBlank) // This is part of the process of checking if we're able to build an entirely new vertical word.
                     {
                         rstart = r; // Set the initial starting row
                         for (int i = r - 1; i >= 0; i--) // Search all the rows behind
                         {
-                            //NOTE: letters.Add(tilesc[i, c]); // Add the letter we may be building off of
                             letters.Add(gameboard[i, c].letter_value); // Add the letter we may be building off of
-                            //NOTE: if (tilesc[i, c] == BLANK_LETTER) // Need a blank tile to place a word.
+
                             if (gameboard[i, c].IsBlank) // Need a blank tile to place a word.
                             {
                                 if (c + 1 <= 9) // If we can search to the right
-                                    //NOTE: if (tilesc[i, c + 1] != BLANK_LETTER) // Verify we're not building next to other tiles CAP: Modify this so the function will check if it's a valid word
                                     if (!gameboard[i, c + 1].IsBlank) // Verify we're not building next to other tiles CAP: Modify this so the function will check if it's a valid word
                                         break; // If we are break before rstart is set
+
                                 if (c - 1 >= 0) // If we can search to the left
-                                    //NOTE: if (tilesc[i, c - 1] != BLANK_LETTER) // Verify we're not building next to other tiles
                                     if (!gameboard[i, c - 1].IsBlank) // Verify we're not building next to other tiles
                                         break; // If we are break before rstart is set
 
@@ -668,7 +646,6 @@ namespace UpwordsAI
                 GraphicTile selected_tile = gameboard[pos[0], pos[1]];
                 selected_tile.DrawTile(c, (sbyte)(selected_tile.stack_value + 1));
 
-                //NOTE: SetTile(pos, c, stacklev[pos[0], pos[1]] + 1); // CAP : Eventually update this to retrieve the current stack # and increment it
                 if (!update)
                 {
                     int letter_index = AI_tiles.ToList().FindIndex(x => x.letter_value == c);
@@ -792,14 +769,21 @@ namespace UpwordsAI
         /// </summary>
         private void GiveAITiles()
         {
-            if(Tile_Bag.Count > 0)
+            List<GraphicTile> ai_tiles = AI_tiles.Where(x => x.IsBlank).ToList();
+            bool there_were_tiles = false;  // Used to track whether or not there were tiles in the local tile bag
+
+            foreach (GraphicTile ai_tile in ai_tiles) // Iterate through all of the AI's tile openings
             {
-                foreach (GraphicTile ai_tile in AI_tiles.Where(x => x.IsBlank)) // Iterate through all of the AI's tile openings
+                if (Tile_Bag.Count > 0)
                 {
+                    there_were_tiles = true;
                     ai_tile.DrawTile(Tile_Bag.Pop(), -1); // Grab a tile from the tile bag, give it to the AI, and draw the AI tile hand.
                 }
+                else
+                    break;
             }
-            else
+
+            if (ai_tiles.Count > 0 && !there_were_tiles)
             {
                 MessageBox.Show("The tile bag is empty.", "No more tiles");
             }
@@ -838,7 +822,7 @@ namespace UpwordsAI
         {
             for (int r = 0; r < 10; r++)
                 for (int c = 0; c < 10; c++)
-                    SetTile(new int[] { r, c }, BLANK_LETTER, 0);
+                    gameboard[r, c].DrawTile(BLANK_LETTER, 0);
             firstturn = true;
         }
 
@@ -1336,10 +1320,11 @@ namespace UpwordsAI
                 for (int r = 0; r < 10; r++) // Row
                     for (int c = 0; c < 10; c++) // Column
                     {
-                        SetTile(new int[] { r, c }, (board[0, r, c] != null) ? board[0, r, c][0] : BLANK_LETTER, int.Parse(board[1, r, c] ?? "0"));
-                        //AI_PlaceTile((board[0, r, c] != null) ? board[0, r, c][0] : BLANK_LETTER, new int[] { r, c }, true);
-                        //stacklev[r, c] = int.Parse(board[1, r, c]??"0");
+                        char letter = (board[0, r, c] != null) ? board[0, r, c][0] : BLANK_LETTER;  // If the letter is NULL, set it to BLANK. Otherwise set it to the letter it represents.
+                        sbyte stack_level = sbyte.Parse(board[1, r, c] ?? "0"); // If the stack level is NULL, set it to 0. Else, parse whatever it is and set it.
+                        gameboard[r, c].DrawTile(letter, stack_level);  // Set tile letter and stack level, draw the tile.
                     }
+
             if (firstturn)
                 foreach(GraphicTile tile in gameboard)
                     if(!tile.IsBlank)   // If any tiles are filled
@@ -1347,12 +1332,6 @@ namespace UpwordsAI
                         firstturn = false; // Then we are not making the first move!
                         break;
                     }
-                /*NOTE: foreach (char c in tilesc)
-                    if (c != BLANK_LETTER)
-                    {
-                        firstturn = false;
-                        break;
-                    }*/
         }
 
         private void sendmoveBUT_Click(object sender, EventArgs e)
@@ -1362,21 +1341,12 @@ namespace UpwordsAI
         }
         private void AI_SendMove()
         {
-            //playing = true;
-            /* NOTE: g.PlayMove(stacklev, tilesc).GetAwaiter().OnCompleted(
-                delegate ()
-                {
-                    Thread t = new Thread(GetGameState2);
-                    t.Start();
-                });*/
-
             g.PlayMove(gameboard).GetAwaiter().OnCompleted(
                 delegate ()
                 {
                     Thread t = new Thread(GetGameState2);
                     t.Start();
                 });
-            //.GetAwaiter().OnCompleted(delegate() { /*Thread.Sleep(100);*/ GetGameState(); });
         }
 
         private void getstateBUT_Click(object sender, EventArgs e)
