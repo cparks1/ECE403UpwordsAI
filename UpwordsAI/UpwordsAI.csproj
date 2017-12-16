@@ -64,6 +64,7 @@
       <DependentUpon>Form2.cs</DependentUpon>
     </Compile>
     <Compile Include="GraphicTile.cs" />
+    <Compile Include="LocalTileBag.cs" />
     <Compile Include="PlacedWord.cs" />
     <Compile Include="PossibleWordPlacement.cs" />
     <Compile Include="Program.cs" />

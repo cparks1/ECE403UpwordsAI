@@ -55,7 +55,7 @@ namespace UpwordsAI
         const string DICTIONARY_PATH = "Z:\\dictionary.txt";
 #endif
 
-        Stack<char> Tile_Bag = new Stack<char>(); // Stack of characters that will contain all the tiles that can be handed by the gamemaster (for simulations only)
+        LocalTileBag tile_bag = new LocalTileBag(); // LocalTileBag object that will contain all the tiles that can be handed to the AI (not for tournament use)
 
         string[] dictionary = new string[0]; // String array that will hold the entire dictionary.
 
@@ -74,7 +74,6 @@ namespace UpwordsAI
             LoadDictionary(); // Loads up the dictionary given in DICTIONARY_PATH into a string array named dictionary
             InitializeBoard(); // Draws the board and sets all tiles to blanks
             InitializeAITiles(); // Draws the AI's held tiles and sets them all to blanks
-            ResetTileBag(); // Initializes the bag of tiles
         }
 
         public void InitializeBoard()
@@ -110,54 +109,6 @@ namespace UpwordsAI
                 xpos += 33;
             }
 
-        }
-
-        public void ResetTileBag() // Resets the tile bag, puts all the tiles into it, and then shuffles.
-        {
-            Tile_Bag = new Stack<char>();
-            Tile_Bag.Push('J'); // 1 of each
-            Tile_Bag.Push('Q');
-            Tile_Bag.Push('V');
-            Tile_Bag.Push('X');
-            Tile_Bag.Push('Z');
-            for (int i = 0; i < 2; i++) // 2 of each
-            {
-                Tile_Bag.Push('K');
-                Tile_Bag.Push('W');
-                Tile_Bag.Push('Y');
-            }
-            for (int i = 0; i < 3; i++) // 3 of each
-            {
-                Tile_Bag.Push('B');
-                Tile_Bag.Push('F');
-                Tile_Bag.Push('G');
-                Tile_Bag.Push('H');
-                Tile_Bag.Push('P');
-            }
-            for (int i = 0; i < 4; i++) // 4 of each
-                Tile_Bag.Push('C');
-            for (int i = 0; i < 5; i++) // 5 of each
-            {
-                Tile_Bag.Push('D');
-                Tile_Bag.Push('L');
-                Tile_Bag.Push('M');
-                Tile_Bag.Push('N');
-                Tile_Bag.Push('R');
-                Tile_Bag.Push('T');
-                Tile_Bag.Push('U');
-            }
-            for (int i = 0; i < 6; i++) // 6 of each
-                Tile_Bag.Push('S');
-            for (int i = 0; i < 7; i++) // 7 of each
-            {
-                Tile_Bag.Push('A');
-                Tile_Bag.Push('I');
-                Tile_Bag.Push('O');
-            }
-            for (int i = 0; i < 8; i++)
-                Tile_Bag.Push('E');
-
-            Tile_Bag = new Stack<char>(Tile_Bag.OrderBy(a => Guid.NewGuid())); // Randomizes the order in which the tiles are stacked
         }
 
         public void LoadDictionary()
@@ -730,23 +681,17 @@ namespace UpwordsAI
         /// </summary>
         private void GiveAITiles()
         {
-            List<GraphicTile> ai_tiles = AI_tiles.Where(x => x.IsBlank).ToList();
-            bool there_were_tiles = false;  // Used to track whether or not there were tiles in the local tile bag
-
-            foreach (GraphicTile ai_tile in ai_tiles) // Iterate through all of the AI's tile openings
+            foreach(GraphicTile ai_tile in AI_tiles.Where(x=>x.IsBlank))  // Loop through all blank spaces in the AI's tile hand
             {
-                if (Tile_Bag.Count > 0)
+                if(tile_bag.Take(out char new_tile))  // If we were able to grab a tile from the bag
                 {
-                    there_were_tiles = true;
-                    ai_tile.DrawTile(Tile_Bag.Pop(), -1); // Grab a tile from the tile bag, give it to the AI, and draw the AI tile hand.
+                    ai_tile.DrawTile(new_tile, -1);  // Grab a tile from the bag, give it to the AI. Draw the new tile in the AI's tile hand.
                 }
                 else
+                {
+                    MessageBox.Show("The tile bag is empty.", "No more tiles");
                     break;
-            }
-
-            if (ai_tiles.Count > 0 && !there_were_tiles)
-            {
-                MessageBox.Show("The tile bag is empty.", "No more tiles");
+                }
             }
         }
 
@@ -1178,7 +1123,7 @@ namespace UpwordsAI
         {
             ClearAITiles(); // Clear AI tiles
             ClearGameboard(); // Clear game board
-            ResetTileBag(); // Reset tile bag
+            tile_bag.Reset(); // Reset tile bag
             GiveAITiles(); // Hand AI tiles
 
             if (scoreLBL.InvokeRequired)
