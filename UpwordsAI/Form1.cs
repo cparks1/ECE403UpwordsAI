@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 //                                  Stacking : 
 //
 // 12/9, 12/10/17: Began making portions of the code more readable by making it more object oriented. (Created Tile and GraphicTile objects, converted AI tile hand to use those instead of two arrays)
+// 12/16/17: Removed dead code from Form1.cs that was made obsolete by the object orientation.
 
 namespace UpwordsAI
 {
@@ -59,14 +60,9 @@ namespace UpwordsAI
         string[] dictionary = new string[0]; // String array that will hold the entire dictionary.
 
         GraphicTile[,] gameboard = new GraphicTile[10, 10]; // 10x10 array of tiles visible to humans that stores data on the character and stack level of that tile.
-        //char[,] tilesc = new char[10, 10]; // Array of 10 rows, 10 columns of tiles readable by machine
-        //int[,] stacklev = new int[10, 10]; // Array of 10 rows, 10 columns of the stack level of the tiles on the gameboard
-
         GraphicTile[] AI_tiles = new GraphicTile[7]; // Array of 7 tiles to be held by the AI
 
-
         bool firstturn = true; // Boolean that determines if the AI will follow special rules for placing the first word.
-
 
         Random rand = new Random(); // Random number generator used in first move type turns to create unpredictable first turns
 
@@ -190,41 +186,6 @@ namespace UpwordsAI
                     tempd.Add(word);
             }
             dictionary = tempd.ToArray(); // Replace the loaded dictionary with the new fixed dictionary.
-        }
-
-        public void DrawText(ref PictureBox pb, char letter, int stack)
-        {
-            Bitmap bmp = new Bitmap(32, 32); // Tile size is 32x32 px
-
-            RectangleF rectf = new RectangleF(1, 1, 31, 31); // Used to define the rectangle in which the letter will be drawn
-            RectangleF rectuf = new RectangleF(16, 6, 31, 31); // Rectangle containing the "U" after "Q"
-            RectangleF rectnum = new RectangleF(22, 18, 9, 13); // Used to define the rectangle in which the stack number will be drawn
-
-            Graphics g = Graphics.FromImage(bmp);
-
-            g.DrawRectangle(Pens.Black, 0, 0, 31, 31);
-            if (letter != BLANK_LETTER)
-            {
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.DrawString(letter.ToString(), new Font("Arial", 12), Brushes.Black, rectf);
-
-                if (letter == 'Q')
-                    g.DrawString("U", new Font("Arial", 8), Brushes.Black, rectuf);
-
-                if (stack > -1) // Stack value of -1 will tell the function to NOT draw the stack number.
-                    g.DrawString(stack.ToString(), new Font("Arial", 8), Brushes.Red, rectnum);
-
-                g.Flush(); // Release resources used by drawing
-
-            }
-            pb.Image = bmp;
-        }
-
-        public void SetTile(int[] pos, char letter, int stack) // Sets the tile and draws it. Pos follows the expected form of { row, column }.
-        {
-            gameboard[pos[0], pos[1]].DrawTile(letter, (sbyte)stack);
         }
 
         private void Form1_Load(object sender, EventArgs e)
