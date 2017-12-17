@@ -119,22 +119,50 @@ namespace UpwordsAI
             { MessageBox.Show(exc.ToString(), "Unable to load dictionary!", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
-        public void FixDictionary() // The AI program takes in a normal dictionary containing words that it cannot yet read. It also may contain unplayable words, such as "NIQAB"
-        { // This function removes all words that cannot be played (words that contain a 'Q' that doesn't come before a 'U') and changes 'Qu' sequences to just 'Q' so the AI can use the word
+        /// <summary>
+        /// Removes words that the AI cannot play from the dictionary that's been loaded.
+        /// Modifies words in the dictionary that the AI can play, so it can understand them.
+        /// For example, QUACK is changed to QACK.
+        /// NIQAB is removed as it is unplayable in UpWords.
+        /// </summary>
+        public void FixDictionary()
+        {
             List<string> tempd = new List<string>(); // Temporary dictionary
             foreach (string word in dictionary)
             {
-                int index = word.IndexOf('Q');
-                if (index > -1) // There is actually a Q in the word
+                string modified_word = "";
+                bool playable_word = true;
+
+                for (int i = 0; i < word.Length; i++) // Look through all characters in the word
                 {
-                    if (index < word.Length - 1) // If 'Q' is not the last letter in the word
+                    char c = char.ToUpper(word[i]); // AI only handles tiles in upper case.
+                    if(c=='Q') // If it's a Q verify the next letter is a U
                     {
-                        if (word[index + 1] == 'U') // If the next letter is 'U'
-                            tempd.Add(word.Replace("QU", "Q")); // Add the word to the dictionary as a playable word, but change the "QU" to just "Q", so the AI can play the word without extra routines
+                        if(i + 1 == word.Length) // Q is the last letter in the word
+                        {
+                            playable_word = false;
+                        }
+                        else if(char.ToUpper(word[i+1]) != 'U') // Q MUST have a U following it, or the word is unplayable.
+                        { // If 'U' is not next, remove the word by not adding it to the tempd list
+                            playable_word = false;
+                            break;
+                        }
+                        else // If it is next, change it from QU to Q
+                        {
+                            modified_word += 'Q';
+                            i++; // Skip the U in the word. For loop will increment again at the end of this loop.
+                        }
+                    }
+                    else
+                    {
+                        modified_word += c; // Add the letter.
                     }
                 }
-                else
-                    tempd.Add(word);
+
+                if(playable_word) // Addthe word to the modified dictionary
+                {
+                    tempd.Add(modified_word);
+                }
             }
             dictionary = tempd.ToArray(); // Replace the loaded dictionary with the new fixed dictionary.
         }
