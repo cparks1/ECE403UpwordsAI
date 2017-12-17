@@ -413,15 +413,10 @@ namespace UpwordsAI
 
                     if (!gameboard[r, c].IsBlank) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
                     {
-                        List<int> rows; List<char> rschars;
-                        List<int> rowe; List<char> rechars;
-                        List<int> cols; List<char> cschars;
-                        List<int> cole; List<char> cechars;
-
-                        SearchUpward(pos, out rows, out rschars, out rstart); // Search in all four directions of the tile and record what we see
-                        SearchDownward(pos, out rowe, out rechars, out rend); // as well as record valid data needed for word placement
-                        SearchLeftward(pos, out cols, out cschars, out cstart);
-                        SearchRightward(pos, out cole, out cechars, out cend);
+                        SearchUpward(pos, out List<int> rows, out List<char> rschars, out rstart); // Search in all four directions of the tile and record what we see
+                        SearchDownward(pos, out List<int> rowe, out List<char> rechars, out rend); // as well as record valid data needed for word placement
+                        SearchLeftward(pos, out List<int> cols, out List<char> cschars, out cstart);
+                        SearchRightward(pos, out List<int> cole, out List<char> cechars, out cend);
 
                         if (rstart != -1 && rend != -1 && rstart != rend) // If we can make a vertical word
                         {
@@ -964,6 +959,7 @@ namespace UpwordsAI
                         int wdex = atr - p.row; // The index of the letter in p's string is the row of attachment minus the starting row (since we're vertical)
                         int awdex = atc - a.column; // Index of the letter in a's string is the column of attachment minus the starting column
                         words.RemoveAll(x => !NewStackWordExists(a.word, wdex, awdex, x)); // Remove words where the tile would be changed and make a non-existent word
+                        // NOTE: Why are they being added in the first place?
                     }
                     else // If p is horizontal,
                     {
@@ -971,10 +967,12 @@ namespace UpwordsAI
                         int wdex = atc - p.column;// The index of the letter in p's string is the column of attachment minus the starting column (since we're horizontal)
                         int awdex = atr - a.row;
                         words.RemoveAll(x => !NewStackWordExists(a.word, wdex, awdex, x)); // Remove words where the tile would be changed and make a non-existent word
+                        // NOTE: Why are they being added in the first place?
                     }
 
                 }
 
+                // NOTE: I have a note asking why words with a stack level > 5 would be added. It seems this may be preventing that from actually happening, which means I can remove a redundant check.
                 if (p.dir) // This if statement will prevent any words that would cause a stack level higher than 5 from being played.
                 {
                     for (int r = p.row; r < p.row + p.Length; r++)
@@ -1154,11 +1152,11 @@ namespace UpwordsAI
             tile_bag.Reset(); // Reset tile bag
             GiveAITiles(); // Hand AI tiles
 
+            score = 0;
             if (scoreLBL.InvokeRequired)
                 scoreLBL.Invoke(new MethodInvoker(delegate { scoreLBL.Text = "Score: " + score.ToString(); }));
             else
                 scoreLBL.Text = "Score: " + score.ToString();
-            score = 0;
         }
 
         private void stopautoplayBUT_Click(object sender, EventArgs e)
@@ -1303,15 +1301,10 @@ namespace UpwordsAI
 
                         if (!gameboard[r, c].IsBlank) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
                         {
-                            List<int> rows; List<char> rschars;
-                            List<int> rowe; List<char> rechars;
-                            List<int> cols; List<char> cschars;
-                            List<int> cole; List<char> cechars;
-
-                            SearchUpward(pos, out rows, out rschars, out rstart); // Search in all four directions of the tile and record what we see
-                            SearchDownward(pos, out rowe, out rechars, out rend); // as well as record valid data needed for word placement
-                            SearchLeftward(pos, out cols, out cschars, out cstart);
-                            SearchRightward(pos, out cole, out cechars, out cend);
+                            SearchUpward(pos, out List<int> rows, out List<char> rschars, out rstart); // Search in all four directions of the tile and record what we see
+                            SearchDownward(pos, out List<int> rowe, out List<char> rechars, out rend); // as well as record valid data needed for word placement
+                            SearchLeftward(pos, out List<int> cols, out List<char> cschars, out cstart);
+                            SearchRightward(pos, out List<int> cole, out List<char> cechars, out cend);
 
                             if (rstart != -1 && rend != -1 && rstart != rend) // If we can make a vertical word
                             {
@@ -1320,6 +1313,7 @@ namespace UpwordsAI
                                 List<char> lets = new List<char>(); lets.AddRange(rschars); lets.AddRange(rechars);
                                 NewPossibleWordPlacements.Add(new NewPossibleWordPlacement(true, lets, r, c, rows, rowe));
                             }
+
                             if (cstart != -1 && cend != -1 && cstart != cend) // If we can make a horizontal word
                             {
                                 PossibleWordPlacements.Add(new PossibleWordPlacement(false, gameboard[r, c].letter_value, gameboard[r, c].stack_value, r, c, cstart, cend)); // Add the word to the list of possible word plays
