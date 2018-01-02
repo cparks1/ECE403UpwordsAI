@@ -1,9 +1,9 @@
 # Upwords AI
 This repository contains the source code for an Artificial Intelligence capable of playing Hasbro's board game "Upwords". It was created for a project in Lance Fiondella's undergraduate Artificial Intelligence class (ECE 403) at UMass Dartmouth.
 
-The project is pure C# and uses REST for communications with the tournament adjudicator program. The tournament adjudicator repository can be found at https://github.com/bdavs/TournamentAdjudicator. I've also forked that repository on my GitHub profile.
+The project is pure C# and uses GET/POST requests with JSON encoded data for communications with the tournament adjudicator program. The tournament adjudicator can be found at https://github.com/cparks1/TournamentAdjudicator.
 
-This project was coded quickly without regard to code organization, so as of now (12/31/16) the code is a bit disorganized and hard to follow. I am now (as of 12/11/17) making some effort to make the code more user friendly. If you have any questions do not hesitate to contact or email me.
+As of now (12/31/16) the code is disorganized and hard to follow. I am now (as of 12/11/17) making some effort to make the code more user friendly. If you have any questions, feel free to contact me.
 
 
 Opening the AI:
