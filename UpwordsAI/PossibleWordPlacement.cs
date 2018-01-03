@@ -8,14 +8,45 @@ namespace UpwordsAI
 {
     class PossibleWordPlacement
     {
-        public bool     dir; // Direction the word will be placed in. TRUE means the word will be placed VERTICALLY, FALSE means the word will be placed HORIZONTALLY.
-        public char  letter; // Letter the word will be building off of.
-        public int     lrow; // Row position of the letter we will be building off of.
-        public int     lcol; // Column position of the letter we will be building off of.
-        public int    start; // Column/row that is the furthest (up/left) possible away from the tile that we can build on.
-        public int      end; // Column/row that is the furthest (down/right) possible away from the tile that we can build on.
-        public int stacklev; // Stack level of the connecting tile
-        public List<string> playablewords = new List<string>();
+        /// <summary>
+        /// Direction the word will be placed in. TRUE means the word will be placed VERTICALLY, FALSE means the word will be placed HORIZONTALLY.
+        /// </summary>
+        public bool     dir;
+
+        /// <summary>
+        /// Letter the word will be building off of.
+        /// </summary>
+        public char  letter;
+
+        /// <summary>
+        /// Row position of the letter we will be building off of.
+        /// </summary>
+        public int     lrow;
+
+        /// <summary>
+        /// Column position of the letter we will be building off of.
+        /// </summary>
+        public int     lcol;
+
+        /// <summary>
+        /// Column/row that is the furthest (up/left) possible away from the tile that we can build on.
+        /// </summary>
+        public int    start;
+
+        /// <summary>
+        /// Column/row that is the furthest (down/right) possible away from the tile that we can build on.
+        /// </summary>
+        public int      end;
+
+        /// <summary>
+        /// Stack level of the connecting tile
+        /// </summary>
+        public int stacklev;
+
+        /// <summary>
+        /// Longest playable word that was found for this possible placement.
+        /// </summary>
+        public string longest_word = "";
 
         /// <summary>
         /// Creates a possible word placement object that stores information needed to make a word play without scoring in mind possible.
@@ -65,7 +96,7 @@ namespace UpwordsAI
 
         public int Score()
         {
-            string w = this.playablewords[0];   // Grab the best word from what should be a sorted array
+            string w = this.longest_word;   // Grab the best word from what should be a sorted array
             int regscore = 0;                   // Initialize return score to 0
             if (this.stacklev == 1)
             {
@@ -79,6 +110,43 @@ namespace UpwordsAI
                 regscore += (w.Length > 7) ? w.Length - 1 + this.stacklev + 20 : w.Length - 1 + this.stacklev;
             }
             return regscore;
+        }
+
+        /// <summary>
+        /// Given a dictionary and tile hand, sets the longest playable word of a possible word placement.
+        /// </summary>
+        /// <param name="AI_tiles">GraphicTile array containing the AI's tile hand</param>
+        /// <param name="dictionary">Array containing all valid words</param>
+        /// <returns>True if a playable word was found, false otherwise.</returns>
+        public bool SetLongestWord(GraphicTile[] AI_tiles, string[] dictionary)
+        {
+            // NOTE: KNown bug: Function doesn't take into account the fact that Q is worth extra points on a word placement
+            int lpos = (this.dir) ? this.lrow : this.lcol;
+            int maxlen = this.end - this.start + 1;
+
+            /* Set the longest word for this PossibleWordPlacement */
+            foreach (string s in dictionary)
+            {
+                if (s.Length <= maxlen && s.Length > this.longest_word.Length)
+                {
+                    int word_placement_letter_index = s.IndexOf(this.letter); // Index of the letter we're building off of
+                    int number_of_tiles_after_letter = s.Length - 1 - word_placement_letter_index; // Number of tiles after the letter we're building off of
+                    int max_number_of_tiles_after_letter = this.end - lpos; // Maximum number of tiles allowed after the letter we're building off of
+                    int max_number_of_tiles_before_letter = lpos - this.start; // Maximum number of tiles allowed before the letter we're building off of
+
+                    // If p.letter exists in the word and its index is less than the index of the letter we're building off of
+                    if (word_placement_letter_index >= 0 &&                                 // If p.letter exists in the word
+                       word_placement_letter_index <= lpos &&                               // and comes before the letter we're building off of
+                       number_of_tiles_after_letter <= max_number_of_tiles_after_letter &&  // and the number of tiles after the letter are valid
+                       word_placement_letter_index <= max_number_of_tiles_before_letter &&  // and the number of tiles before the letter are valid
+                       Utilities.HasTilesForWord(s, this.letter, AI_tiles) )                // and the AI has tiles to play this word
+                    {
+                        this.longest_word = s;
+                    }
+                }
+            }
+
+            return this.longest_word != "";
         }
     }
 

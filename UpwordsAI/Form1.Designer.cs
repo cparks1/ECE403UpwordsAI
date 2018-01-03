@@ -306,7 +306,6 @@
             this.Name = "Form1";
             this.Text = "Upwords - AI Player";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
-            this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.portUD)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();

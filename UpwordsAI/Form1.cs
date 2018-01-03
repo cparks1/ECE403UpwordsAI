@@ -1,5 +1,5 @@
 ﻿#define simulation // Undefine this if the AI is competing
-#define HOME_COMPUTER
+#define WORK_COMPUTER
 
 using System;
 using System.Collections.Generic;
@@ -49,10 +49,12 @@ namespace UpwordsAI
 
         const char BLANK_LETTER = '~';
 
-#if !SCHOOL_COMPUTER
-        const string DICTIONARY_PATH = "C:\\Users\\Christopher\\Documents\\dictionary.txt"; // "Z:\\dictionary.txt";
-#else
+#if   SCHOOL_COMPUTER
         const string DICTIONARY_PATH = "Z:\\dictionary.txt";
+#elif WORK_COMPUTER
+        const string DICTIONARY_PATH = "C:\\users\\cparks\\Documents\\dictionary.txt";
+#elif HOME_COMPUTER
+        const string DICTIONARY_PATH = "C:\\Users\\Christopher\\Documents\\dictionary.txt"; // "Z:\\dictionary.txt";
 #endif
 
         LocalTileBag tile_bag = new LocalTileBag(); // LocalTileBag object that will contain all the tiles that can be handed to the AI (not for tournament use)
@@ -166,9 +168,6 @@ namespace UpwordsAI
             }
             dictionary = tempd.ToArray(); // Replace the loaded dictionary with the new fixed dictionary.
         }
-
-        private void Form1_Load(object sender, EventArgs e)
-        { }
 
         private void FindNextMove3() // This function finds possible moves the AI can make after the first turn and plays them, where a move is considered to be building an entirely new word off of one or multiple words.
         {
@@ -437,44 +436,12 @@ namespace UpwordsAI
 
             foreach (PossibleWordPlacement p in PossibleWordPlacements)
             {
-                int lpos = (p.dir) ? p.lrow : p.lcol;
-                int maxlen = p.end - p.start + 1;
-                List<string> words = new List<string>();
-                //words.AddRange(dictionary.Where(x => x.Length <= maxlen && x.Contains(p.letter.ToString())).Where(x => x.IndexOf(p.letter) <= lpos && x.IndexOf(p.letter)+1 >= (lpos+1) - (maxlen - x.Length))); // CAP : Attempted to fix this issue by adding 1 to lpos, to make it a 1 based (starts at 1 instead of 0) number like the rest of the evals against it
-                //words.AddRange(dictionary.Where(x => x.Length <= maxlen && x.Contains(p.letter.ToString())).Where(x => x.IndexOf(p.letter) <= lpos && lpos-x.IndexOf(p.letter) + x.Length-1 <= p.end)); // nah this one doesnt work
-                words.AddRange(dictionary.Where(x => x.Length <= maxlen && x.Contains(p.letter.ToString())).Where(x => x.IndexOf(p.letter) <= lpos && x.Length - 1 - x.IndexOf(p.letter) <= p.end - lpos && x.IndexOf(p.letter) <= lpos - p.start)); // CAP : Evaluated lambdas, figured this one would work correctly
-                words = words.OrderByDescending(x => x.Length).ToList(); // Simple explanation: These two lines save all possible playable words to a list of strings and sorts them so the longest ones come first. It is later evaluated to see which words CAN be played, based on tiles the AI has.
-                /* BREAKDOWN OF THE WIZARDRY:
-                * x.Length <= maxlen GETS ALL WORDS THAT'RE AS LONG AS THE MAX LENGTH OR LESS
-                * x.IndexOf(p.letter) ENSURES THESE WORDS HAVE THE TILE WE'RE BUILDING OFF OF
-                * x.IndexOf(p.letter) <= lpos ENSURES WE'RE NOT TRYING TO SHIFT THE TILE WE'RE BUILDING OFF OF AROUND. YOU MAY NEED TO DO THAT ONE OUT ON PAPER TO BELIEVE ME, I THOUGHT IT WAS BULLSHIT TOO. I HAD TO CHECK THIS PART LIKE 3 TIMES, LIKE WTF MAN. IT CHECKS OUT THO. ACTUALLY THIS SHIT IS WORTHLESS I THINK
-                * x.Length - 1 - x.IndexOf(p.letter) <= p.end - lpos : Gets the number of tiles after the letter (Lefthand side) and then (p.end - lpos) gets the number of tiles that CAN come after the letter. The <= ensures that the number of tiles after the letter are as many as can be, and not more.
-                * x.IndexOf(p.letter) <= lpos - p.start : Does the same thing as above, but with the tiles before the letter rather than after.
-                * It then sorts these words with the largest ones coming first, as we always want to make the largest play we can for maximum points. This may change if we implement war gaming. */
-
-                /* 12/13/17 NOTE: for fuck's sake, change this to something that can be optimized */
-
-                foreach (string w in words)
-                    if (HasTilesForWord(w, p.letter)) // If the AI has tiles to play the word
-                        p.playablewords.Add(w); // Save the word as playable word
+                p.SetLongestWord(AI_tiles, dictionary);
             }
 
-            PossibleWordPlacements = PossibleWordPlacements.Where(x => x.playablewords.Count > 0).ToList(); // Trim any possible placements with 0 playable words
-            PossibleWordPlacements = PossibleWordPlacements.OrderByDescending(x => x.playablewords[0].Length).ToList(); // Order the list so that the possible placements with the longest words are first
+            string best_word = PossibleWordPlacements.Select(x=>x.longest_word).Aggregate("", (max, cur) => max.Length > cur.Length ? max : cur); // Grab the longest word
 
-            if (PossibleWordPlacements.Count > 0) // We cannot place any words if there are no possible placements
-            {
-                PossibleWordPlacement p = PossibleWordPlacements[0];
-                if (p.playablewords.Count > 0) // We cannot place any words if there are no playable words (PossibleWordPlacements trims out the possible placements that had 0 playable words first)
-                {
-                    AI_PlaceWord(p);
-                    return p.playablewords[0];
-                }
-                else
-                    return BLANK_LETTER.ToString();
-            }
-            else
-                return BLANK_LETTER.ToString();
+            return best_word != "" ? best_word : BLANK_LETTER.ToString(); // Return the best_word if it's valid, else return a blank.
         }
 
         public bool HasTilesForWord(string w, char given) // This function assumes there is only one tile we're building off of (one given tile)
@@ -484,16 +451,17 @@ namespace UpwordsAI
                 if (c == given) // This if statement takes into account the fact that we don't need the tile we're playing off of to play a word.
                 {
                     if (w.Count(x => x == c) - 1 > AI_tiles.Count(x => x.letter_value == c)) // Ensures AI has the tiles needed to play this word
-                        return false;// Word unplayable, not enough tiles
+                        return false; // Word unplayable, not enough tiles
                 }
                 else
                 {
                     if (w.Count(x => x == c) > AI_tiles.Count(x => x.letter_value == c)) // Ensures AI has the tiles needed to play this word
-                        return false;// Word unplayable, not enough tiles
+                        return false; // Word unplayable, not enough tiles
                 }
             }
             return true;
         }
+
         public bool HasTilesForWord(string w, char[] given) // This function takes in an array of all the characters that are given to us
         {
             foreach (char c in w)
@@ -643,10 +611,10 @@ namespace UpwordsAI
         }
 
         private void AI_PlaceWord(PossibleWordPlacement p)
-        { // Normally we would have to check if p.playablewords.count > 0, but the function calling this function should be checking ahead so it can do its own thing
-            int strt = (p.dir) ? p.lrow - p.playablewords[0].IndexOf(p.letter) : p.lcol - p.playablewords[0].IndexOf(p.letter); // Shifts the word to where it needs to begin
-            int[] pos = (p.dir) ? new int[] { strt, p.lcol } : new int[] { p.lrow, strt };// Letter coords depend upon placement direction
-            AI_PlaceWord(p.playablewords[0], pos, p.dir);
+        { // Normally we would have to check if p.longest_word != "", but the function calling this function should be checking ahead so it can do its own thing
+            int start = (p.dir) ? p.lrow - p.longest_word.IndexOf(p.letter) : p.lcol - p.longest_word.IndexOf(p.letter); // Shifts the word to where it needs to begin
+            int[] pos = (p.dir) ? new int[] { start, p.lcol } : new int[] { p.lrow, start };// Letter coords depend upon placement direction
+            AI_PlaceWord(p.longest_word, pos, p.dir);
         }
 
         private void AI_PlaceFirstWord(string word)
@@ -718,6 +686,7 @@ namespace UpwordsAI
             }
         }
 
+        // NOTE: There's a bug in this function where it is not placing words.
         private void aiplacewordBUT_Click(object sender, EventArgs e)
         { // When the AI places tiles, the program must then set them to "blank character".
             int[] pos = new int[2];
@@ -730,11 +699,18 @@ namespace UpwordsAI
                 firstturn = false;
             }
             else
+            {
                 word = FindNextMove2();
+            }
+
             if (word != BLANK_LETTER.ToString())
-                MessageBox.Show("Attempted word play was: " + word.Replace("Q", "QU") + ".");
+            {
+                logboxTB.Text += $"PLAYED: {word.Replace("Q", "QU")}.\r\n";
+            }
             else
+            {
                 MessageBox.Show("The AI was unable to play a word.");
+            }
         }
 
         private void clearaitilesBUT_Click(object sender, EventArgs e)
@@ -1324,36 +1300,32 @@ namespace UpwordsAI
                         }
                     }
 
+                // NOTE: Known issue with this routine: doesn't account for Q being worth 2 more points
                 foreach (PossibleWordPlacement p in PossibleWordPlacements)
                 {
-                    int lpos = (p.dir) ? p.lrow : p.lcol;
-                    int maxlen = p.end - p.start + 1;
-                    List<string> words = new List<string>();
-                    words.AddRange(dictionary.Where(x => x.Length <= maxlen && x.Contains(p.letter.ToString())).Where(x => x.IndexOf(p.letter) <= lpos && x.Length - 1 - x.IndexOf(p.letter) <= p.end - lpos && x.IndexOf(p.letter) <= lpos - p.start)); // CAP : Evaluated lambdas, figured this one would work correctly
-                    words = words.OrderByDescending(x => x.Length).ToList(); // Simple explanation: These two lines save all possible playable words to a list of strings and sorts them so the longest ones come first. It is later evaluated to see which words CAN be played, based on tiles the AI has.
-
-                    foreach (string w in words)
-                        if (HasTilesForWord(w, p.letter)) // If the AI has tiles to play the word
-                            p.playablewords.Add(w); // Save the word as playable word
+                    p.SetLongestWord(AI_tiles, dictionary);
                 }
 
-                PossibleWordPlacements = PossibleWordPlacements.Where(x => x.playablewords.Count > 0).ToList(); // Trim any possible placements with 0 playable words
-                PossibleWordPlacements = PossibleWordPlacements.OrderByDescending(x => x.Score()).ToList(); // Order the list so that the possible placements with the longest words are first
+                PossibleWordPlacements = PossibleWordPlacements.Where(x => x.longest_word != "").OrderByDescending(x => x.longest_word.Length).ToList(); // Trim any possible placements with no playable word
 
                 int pregular;
                 PossibleWordPlacement pbestreg = null;
                 if (PossibleWordPlacements.Count > 0) // We cannot place any words if there are no possible placements
                 {
                     pbestreg = PossibleWordPlacements[0];
-                    if (pbestreg.playablewords.Count > 0) // We cannot place any words if there are no playable words (PossibleWordPlacements trims out the possible placements that had 0 playable words first)
+                    if (pbestreg.longest_word != "") // Verify the longest_word is a valid word
                     {
                         pregular = pbestreg.Score();
                     }
                     else
+                    {
                         pregular = 0;
+                    }
                 }
                 else
+                {
                     pregular = 0;
+                }
 
                 //WER: Similar to regular play copied code from AIPlayStack is used to get the score of the best stack play available
                 List<PlacedWord> PlacedWords = FindWordsOnBoard();
