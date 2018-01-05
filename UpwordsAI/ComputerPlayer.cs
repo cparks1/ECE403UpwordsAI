@@ -14,7 +14,7 @@ namespace UpwordsAI
         /// <summary>
         /// Array of graphic tiles that represent the AI's tile hand.
         /// </summary>
-        GraphicTile[] tileset = new GraphicTile[MAX_NUM_TILES];
+        public GraphicTile[] tileset = new GraphicTile[MAX_NUM_TILES];
 
         public ComputerPlayer()
         {
@@ -79,6 +79,13 @@ namespace UpwordsAI
             }
         }
 
+        public void PlaceWord(PossibleWordPlacement p, GraphicTile[,] gameboard)
+        { // Normally we would have to check if p.longest_word != "", but the function calling this function should be checking ahead so it can do its own thing
+            int start = (p.dir) ? p.lrow - p.longest_word.IndexOf(p.letter) : p.lcol - p.longest_word.IndexOf(p.letter); // Shifts the word to where it needs to begin
+            int[] pos = (p.dir) ? new int[] { start, p.lcol } : new int[] { p.lrow, start };// Letter coords depend upon placement direction
+            PlaceWord(p.longest_word, pos, p.dir, gameboard);
+        }
+
         public bool HasTilesForWord(string w, char given) // This function assumes there is only one tile we're building off of (one given tile)
         {
             foreach (char c in w)
@@ -110,6 +117,27 @@ namespace UpwordsAI
                 {
                     if (w.Count(x => x == c) > tileset.Count(x => x.letter_value == c)) // Ensures AI has the tiles needed to play this word
                         return false;// Word unplayable, not enough tiles
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Gives the AI tiles from a local tile bag. Not to be used in tournament plays.
+        /// </summary>
+        /// <returns>True if a tile was available, false otherwise.</returns>
+        public bool GrabTiles(LocalTileBag tile_bag)
+        {
+            foreach (GraphicTile ai_tile in tileset.Where(x => x.IsBlank))  // Loop through all blank spaces in the AI's tile hand
+            {
+                if (tile_bag.Take(out char new_tile))  // If we were able to grab a tile from the bag
+                {
+                    ai_tile.DrawTile(new_tile, -1);  // Grab a tile from the bag, give it to the AI. Draw the new tile in the AI's tile hand.
+                }
+                else
+                {
+                    Debug.WriteLine("The tile bag is empty.", "No more tiles");
+                    return false;
                 }
             }
             return true;

@@ -66,7 +66,6 @@ namespace UpwordsAI
         string[] dictionary = new string[0]; // String array that will hold the entire dictionary.
 
         GraphicTile[,] gameboard = new GraphicTile[10, 10]; // 10x10 array of tiles visible to humans that stores data on the character and stack level of that tile.
-        GraphicTile[] AI_tiles = new GraphicTile[7]; // Array of 7 tiles to be held by the AI
 
         bool firstturn = true; // Boolean that determines if the AI will follow special rules for placing the first word.
 
@@ -106,12 +105,12 @@ namespace UpwordsAI
         public void InitializeAITiles()
         {
             int xpos = gameboard[9, 1].tile_box.Left + 16, ypos = gameboard[9, 1].tile_box.Bottom + 32;
-            for (int i = 0; i < AI_tiles.Length; i++)
+            for (int i = 0; i < AI.tileset.Length; i++)
             {
                 Point location = new Point(xpos, ypos);
-                AI_tiles[i] = new GraphicTile(location, i.ToString(), false);
-                Controls.Add(AI_tiles[i].tile_box);
-                AI_tiles[i].DrawTile(BLANK_LETTER, 0);
+                AI.tileset[i] = new GraphicTile(location, i.ToString(), false);
+                Controls.Add(AI.tileset[i].tile_box);
+                AI.tileset[i].DrawTile(BLANK_LETTER, 0);
                 xpos += 33;
             }
 
@@ -524,71 +523,6 @@ namespace UpwordsAI
             return longest_word != "" ? longest_word : BLANK_LETTER.ToString();
         }
 
-        private void AI_PlaceTile(char c, int[] pos, bool update=false) // position array assumes form of { row, column }
-        { // CAP : Update function to handle stacking
-            if (AI_tiles.Select(x=>x.letter_value).Contains(c)) // If the AI has a tile containing the character specified by c
-            {
-                GraphicTile selected_tile = gameboard[pos[0], pos[1]];
-                selected_tile.DrawTile(c, (sbyte)(selected_tile.stack_value + 1));
-
-                if (!update)
-                {
-                    int letter_index = AI_tiles.ToList().FindIndex(x => x.letter_value == c);
-                    AI_tiles[letter_index].DrawTile(BLANK_LETTER, -1);  // Remove the tile being placed from the AI's letter hand
-                }
-            }
-        }
-
-        private void AI_PlaceStack(PossibleWordStackPlacement p)
-        {
-            string word = p.pwords[0];
-            if (word.Length > 1)
-            {
-                if (p.dir)
-                { // When placing a stack vertically, you're working in one column and moving DOWN the rows.
-                    for (int i = 0; i < word.Length; i++)
-                        if (gameboard[p.r + i, p.c].letter_value != word[i]) // If the tile we're placing onto isn't the same as the new word being created
-                            AI_PlaceTile(word[i], new int[] { p.r + i, p.c });
-                }
-                else
-                { // When placing a stack horizontally, you're working in one row and moving DOWN the columns.
-                    for (int i = 0; i < word.Length; i++)
-                        if (gameboard[p.r, p.c + i].letter_value != word[i]) // If the tile we're placing onto isn't the same as the new word being created
-                            AI_PlaceTile(word[i], new int[] { p.r, p.c + i });
-                }
-            }
-        }
-
-        private void AI_PlaceWord(string word, int[] pos, bool dir) // Position array assumes form of { row, column } where position is the position of the first letter of the word.
-        { // The boolean "dir" determines the direction of the word placement, where TRUE is 
-            if (word != BLANK_LETTER.ToString() && word.Length > 1) // Make sure we're not trying to play a blank word or an invalid word
-            {
-                if (dir) // Vertical
-                { // When placing a word vertically, you are working in one column and moving DOWN the rows.
-                    for (int i = 0; i < word.Length; i++)
-                        if (gameboard[pos[0] + i, pos[1]].IsBlank) // This function is only made to handle placement of words onto blank space. It does not handle stacking and will assume that a tile with a letter on it is not to be stacked upon.
-                            AI_PlaceTile(word[i], new int[] { pos[0] + i, pos[1] });
-                }
-                else // Horizontal
-                { // When placing a word horizontally, you are working in one row and moving RIGHT the columns.
-                    for (int i = 0; i < word.Length; i++)
-                        if (gameboard[pos[0], pos[1] + i].IsBlank) // This function is only made to handle placement of words onto blank space. It does not handle stacking and will assume that a tile with a letter on it is not to be stacked upon.
-                            AI_PlaceTile(word[i], new int[] { pos[0], pos[1] + i });
-                }
-            }
-            else
-            {
-                Log_Box_Post_Message("[!] AI attempted to place a blank word.");
-            }
-        }
-
-        private void AI_PlaceWord(PossibleWordPlacement p)
-        { // Normally we would have to check if p.longest_word != "", but the function calling this function should be checking ahead so it can do its own thing
-            int start = (p.dir) ? p.lrow - p.longest_word.IndexOf(p.letter) : p.lcol - p.longest_word.IndexOf(p.letter); // Shifts the word to where it needs to begin
-            int[] pos = (p.dir) ? new int[] { start, p.lcol } : new int[] { p.lrow, start };// Letter coords depend upon placement direction
-            AI_PlaceWord(p.longest_word, pos, p.dir);
-        }
-
         private void AI_PlaceFirstWord(string word)
         // This function is called in the event the AI is able to place the first word, once the largest playable first word has been selected.
         // The boolean "dir" determines the direction of the word placement, where TRUE is Vertical, and FALSE is Horizontal. The position of the word designates the position of the first tile of the word.
@@ -600,12 +534,7 @@ namespace UpwordsAI
 
                 bool dir = (r == 4) ? ((c == 4) ? (rand.Next(int.MaxValue) % 2 == 0) : true) : false; // If pos = (4,4), dir can be random else if (4,5) must be vertical else if (5,4) must be horizontal. (5,5) means error
 
-                if (dir)
-                    for (int i = 0; i < word.Length; i++)
-                        AI_PlaceTile(word[i], new int[] { r + i, c });
-                else
-                    for (int i = 0; i < word.Length; i++)
-                        AI_PlaceTile(word[i], new int[] { r, c + i });
+                AI.PlaceWord(word, new int[] { r, c }, dir, gameboard);
 
                 score += (word.Contains('Q')) ? word.Length * 2 + 2 : word.Length * 2;
                 Set_score_lbl_score(score);
@@ -615,12 +544,7 @@ namespace UpwordsAI
                 bool dir = (rand.Next(int.MaxValue) % 2 == 0) ? true : false; // Choose word placement direction randomly
                 int[] pos = new int[] { ((rand.Next(int.MaxValue) % 2 == 0) ? 4 : 5), ((rand.Next(int.MaxValue) % 2 == 0) ? 4 : 5) }; // Choose word tile start randomly
 
-                if (dir) // Vertical
-                    for (int i = 0; i < word.Length; i++)
-                        AI_PlaceTile(word[i], new int[] { pos[0] + i, pos[1] });
-                else // Horizontal
-                    for (int i = 0; i < word.Length; i++)
-                        AI_PlaceTile(word[i], new int[] { pos[0], pos[1] + i });
+                AI.PlaceWord(word, pos, dir, gameboard);
 
                 score += (word.Contains('Q')) ? word.Length * 2 + 2 : word.Length * 2;
                 Set_score_lbl_score(score);
@@ -631,27 +555,7 @@ namespace UpwordsAI
 
         private void giveaitilesBUT_Click(object sender, EventArgs e)
         {
-            GiveAITiles();
-        }
-        /// <summary>
-        /// Gives the AI tiles from a local tile bag. Not to be used in tournament plays.
-        /// </summary>
-        /// <returns>True if a tile was available, false otherwise.</returns>
-        private bool GiveAITiles()
-        {
-            foreach(GraphicTile ai_tile in AI_tiles.Where(x=>x.IsBlank))  // Loop through all blank spaces in the AI's tile hand
-            {
-                if(tile_bag.Take(out char new_tile))  // If we were able to grab a tile from the bag
-                {
-                    ai_tile.DrawTile(new_tile, -1);  // Grab a tile from the bag, give it to the AI. Draw the new tile in the AI's tile hand.
-                }
-                else
-                {
-                    MessageBox.Show("The tile bag is empty.", "No more tiles");
-                    return false;
-                }
-            }
-            return true;
+            AI.GrabTiles(tile_bag);
         }
 
         // NOTE: There's a bug in this function where it is not placing words.
@@ -669,7 +573,7 @@ namespace UpwordsAI
             {
                 PossibleWordPlacement next_word_placement = FindNextMove2();
                 word = next_word_placement.longest_word;
-                AI_PlaceWord(next_word_placement);
+                AI.PlaceWord(next_word_placement, gameboard);
 
                 score += next_word_placement.Score();
                 Set_score_lbl_score(score);
@@ -689,7 +593,7 @@ namespace UpwordsAI
         { ClearAITiles(); }
         private void ClearAITiles()
         {
-            foreach (GraphicTile ai_tile in AI_tiles)
+            foreach (GraphicTile ai_tile in AI.tileset)
                 ai_tile.DrawTile(BLANK_LETTER, -1);
         }
 
@@ -940,7 +844,7 @@ namespace UpwordsAI
             PossibleStackPlays = PossibleStackPlays.OrderByDescending(x => Utilities.NumberDifferentLetters(x.oldword, x.pwords[0])).ToList(); // Orders the list so the longest stack play is at the front
             if (PossibleStackPlays.Count > 0)
             {
-                AI_PlaceStack(PossibleStackPlays[0]);
+                AI.PlaceStack(PossibleStackPlays[0], gameboard);
                 score += PossibleStackPlays[0].Score(gameboard);
                 Set_score_lbl_score(score);
                 Log_Box_Post_Message($"STACK PLAY: {PossibleStackPlays[0].pwords[0]}\r\n");
@@ -972,7 +876,7 @@ namespace UpwordsAI
                 {
                     if (word[i] != oldword[i])
                     {
-                        if (AI_tiles.Count(x => x.letter_value == word[i]) < word.Count(x => x == word[i])) // If the AI has less tiles of this kind than is required to play the new word
+                        if (AI.tileset.Count(x => x.letter_value == word[i]) < word.Count(x => x == word[i])) // If the AI has less tiles of this kind than is required to play the new word
                             return false; // Then we can't play the word
                         discrepencies++;
                     }
@@ -1036,7 +940,7 @@ namespace UpwordsAI
                 stpw.Start();
 
                 // Post tile hand to logging text box
-                Log_Box_Post_Message($"TILE HAND: {new string(AI_tiles.Select(x=>x.letter_value).ToArray())}\r\n");
+                Log_Box_Post_Message($"TILE HAND: {new string(AI.tileset.Select(x=>x.letter_value).ToArray())}\r\n");
 
                 play_message = AIBestPlayChoice();
                 if (play_message != "NO PLAY")
@@ -1055,7 +959,7 @@ namespace UpwordsAI
 
                 if (tiles_left)
                 {
-                    tiles_left = GiveAITiles();
+                    tiles_left = AI.GrabTiles(tile_bag);
                 }
             }
             while (!play_message.Equals("NO PLAY"));
@@ -1092,7 +996,7 @@ namespace UpwordsAI
             ClearAITiles(); // Clear AI tiles
             ClearGameboard(); // Clear game board
             tile_bag.Reset(); // Reset tile bag
-            GiveAITiles(); // Hand AI tiles
+            AI.GrabTiles(tile_bag); // Hand AI tiles
 
             score = 0;
             Set_score_lbl_score(score);
@@ -1177,10 +1081,10 @@ namespace UpwordsAI
         private void SetAITournamentTiles(string[] tiles)
         {
             if(tiles!=null && tiles.Length > 0)
-                for (int i = 0; i < AI_tiles.Length; i++) // iterate through the AI's given letters                  
+                for (int i = 0; i < AI.tileset.Length; i++) // iterate through the AI's given letters                  
                 {
-                    char newc = (tiles.Length == AI_tiles.Length) ? (tiles[i] != null) ? tiles[i][0] : BLANK_LETTER : BLANK_LETTER; // Handle any possible errors in transmission
-                    AI_tiles[i].DrawTile(newc, -1); // Give the AI the tile we're currently looking at, and draw it.
+                    char newc = (tiles.Length == AI.tileset.Length) ? (tiles[i] != null) ? tiles[i][0] : BLANK_LETTER : BLANK_LETTER; // Handle any possible errors in transmission
+                    AI.tileset[i].DrawTile(newc, -1); // Give the AI the tile we're currently looking at, and draw it.
                 }
         }
 
@@ -1353,7 +1257,7 @@ namespace UpwordsAI
                 {
                     if (best_word_play_score < best_stack_play_score)
                     {
-                        AI_PlaceStack(beststackselect);
+                        AI.PlaceStack(beststackselect, gameboard);
 
                         score += best_stack_play_score;
                         Set_score_lbl_score(score);
@@ -1362,7 +1266,7 @@ namespace UpwordsAI
                     }
                     else
                     {
-                        AI_PlaceWord(pbestreg);
+                        AI.PlaceWord(pbestreg, gameboard);
 
                         score += best_word_play_score;
                         Set_score_lbl_score(score);
