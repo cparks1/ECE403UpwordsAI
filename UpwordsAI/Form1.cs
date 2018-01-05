@@ -590,15 +590,11 @@ namespace UpwordsAI
         }
 
         private void clearaitilesBUT_Click(object sender, EventArgs e)
-        { ClearAITiles(); }
-        private void ClearAITiles()
-        {
-            foreach (GraphicTile ai_tile in AI.tileset)
-                ai_tile.DrawTile(BLANK_LETTER, -1);
-        }
+        { AI.ResetTileHand(); }
 
         private void clearboardBUT_Click(object sender, EventArgs e)
         { ClearGameboard(); }
+
         private void ClearGameboard()
         {
             for (int r = 0; r < 10; r++)
@@ -728,28 +724,41 @@ namespace UpwordsAI
             return WordsOnBoard;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <returns></returns>
         List<PlacedWord> WordsAttachedToTile(int[] pos) // Array pos assumes form of { row, column }.
         {
             int r = pos[0], c = pos[1];
             return FindWordsOnBoard().Where(x => (x.dir) ? ((x.column == c) && (x.row + x.Length - 1 >= r) && (x.row <= r)) : ((x.row == r) && (x.column + x.Length - 1 >= c) && (x.column <= c))).ToList(); // Gets a list of the words attached to the current searched tile
         }
+
+        /// <summary>
+        /// Finds all words in the given list that are attached to a tile at the given position.
+        /// </summary>
+        /// <param name="words">List of words placed on the game board.</param>
+        /// <param name="pos">Integer array, requires form of {row, column}.</param>
+        /// <returns>A list of placed words that are attached to the tile at the given position, taken from the given list of placed words.</returns>
         List<PlacedWord> WordsAttachedToTile(List<PlacedWord> words, int[] pos)
         {
             int r = pos[0], c = pos[1];
             return words.Where(x => (x.dir) ? ((x.column == c) && (x.row + x.Length - 1 >= r) && (x.row <= r)) : ((x.row == r) && (x.column + x.Length - 1 >= c) && (x.column <= c))).ToList(); // Gets a list of the words attached to the current searched tile
         }
+
         List<PlacedWord> WordsAttachedToWord(PlacedWord word, List<PlacedWord> WordsOnBoard)
         {
             List<PlacedWord> WordsAttached = new List<PlacedWord>();
             if (word.dir)
             {
-                bool sl = word.column - 1 >= 0, sr = word.column + 1 < 10; // Whether we can search left/right of the tile
+                bool can_search_left = word.column - 1 >= 0, can_search_right = word.column + 1 < 10; // Whether we can search left/right of the tile
                 int c = word.column;
                 for (int r = word.row; r < word.row + word.Length; r++) // Search through all tiles attached to word
                 {
                     bool found = false; // If we found a word attached to the tile we don't want to check twice by checking left AND right
 
-                    if (sl) // If we can search left (if we can't, there is no word attached to the left)
+                    if (can_search_left) // If we can search left (if we can't, there is no word attached to the left)
                     {
                         if (!gameboard[r, c - 1].IsBlank) // Doing this one comparison saves us time by checking if there is a word attached before trying to get it
                         {
@@ -757,7 +766,7 @@ namespace UpwordsAI
                             found = true;
                         }
                     }
-                    if (sr && !found) // If we can search right (if we can't, there is no word attached to the right) and haven't yet found a word
+                    if (can_search_right && !found) // If we can search right (if we can't, there is no word attached to the right) and haven't yet found a word
                     {
                         if (!gameboard[r, c + 1].IsBlank) // Doing this one comparison saves us time
                         {
@@ -768,13 +777,13 @@ namespace UpwordsAI
             }
             else
             {
-                bool sa = word.row - 1 >= 0, sb = word.row + 1 < 10; // Whether we can search above/below of the tile
+                bool can_search_above = word.row - 1 >= 0, can_search_below = word.row + 1 < 10; // Whether we can search above/below of the tile
                 int r = word.row;
                 for (int c = word.column; c < word.column + word.Length; c++) // Search through all tiles attached to word
                 {
                     bool found = false; // If we found a word attached to the tile we don't want to check twice by checking above AND below
 
-                    if (sa)     // If we can search above
+                    if (can_search_above)     // If we can search above
                     {
                         if (!gameboard[r - 1, c].IsBlank)   // If there's a letter on this tile
                         {
@@ -782,7 +791,7 @@ namespace UpwordsAI
                             found = true;
                         }
                     }
-                    if (sb && !found)   // If we can search below, and we haven't found a word attached to the tile yet
+                    if (can_search_below && !found)   // If we can search below, and we haven't found a word attached to the tile yet
                     {
                         if (!gameboard[r + 1, c].IsBlank)   // If there's a letter on this tile
                         {
@@ -993,7 +1002,7 @@ namespace UpwordsAI
         }
         private void ResetGame()
         {
-            ClearAITiles(); // Clear AI tiles
+            AI.ResetTileHand(); // Clear the AI's tile hand
             ClearGameboard(); // Clear game board
             tile_bag.Reset(); // Reset tile bag
             AI.GrabTiles(tile_bag); // Hand AI tiles

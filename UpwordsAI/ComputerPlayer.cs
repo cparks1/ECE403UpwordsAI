@@ -142,5 +142,11 @@ namespace UpwordsAI
             }
             return true;
         }
+
+        public void ResetTileHand()
+        {
+            foreach (GraphicTile ai_tile in tileset)
+                ai_tile.DrawTile(Utilities.BLANK_LETTER, -1);
+        }
     }
 }
