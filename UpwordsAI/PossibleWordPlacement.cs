@@ -118,30 +118,37 @@ namespace UpwordsAI
         /// <param name="AI_tiles">GraphicTile array containing the AI's tile hand</param>
         /// <param name="dictionary">Array containing all valid words</param>
         /// <returns>True if a playable word was found, false otherwise.</returns>
-        public bool SetLongestWord(GraphicTile[] AI_tiles, string[] dictionary)
+        public bool SetBestWord(ComputerPlayer AI, string[] dictionary)
         {
             // NOTE: KNown bug: Function doesn't take into account the fact that Q is worth extra points on a word placement
             int lpos = (this.dir) ? this.lrow : this.lcol;
             int maxlen = this.end - this.start + 1;
+            int longest_word_true_len = 0;  // Need to keep track of the longest word's "true" length, explained in s_true_len definition
 
             /* Set the longest word for this PossibleWordPlacement */
             foreach (string s in dictionary)
             {
-                if (s.Length <= maxlen && s.Length > this.longest_word.Length)
+                if (s.Length <= maxlen)
                 {
-                    int word_placement_letter_index = s.IndexOf(this.letter); // Index of the letter we're building off of
-                    int number_of_tiles_after_letter = s.Length - 1 - word_placement_letter_index; // Number of tiles after the letter we're building off of
-                    int max_number_of_tiles_after_letter = this.end - lpos; // Maximum number of tiles allowed after the letter we're building off of
-                    int max_number_of_tiles_before_letter = lpos - this.start; // Maximum number of tiles allowed before the letter we're building off of
+                    int s_true_len = s.Length + (s.Contains("Q") ? 1 : 0);  // If the word has a Q in it, we want to consider that as being worth more. (Q tiles are considered as 'Qu')
 
-                    // If p.letter exists in the word and its index is less than the index of the letter we're building off of
-                    if (word_placement_letter_index >= 0 &&                                 // If p.letter exists in the word
-                       word_placement_letter_index <= lpos &&                               // and comes before the letter we're building off of
-                       number_of_tiles_after_letter <= max_number_of_tiles_after_letter &&  // and the number of tiles after the letter are valid
-                       word_placement_letter_index <= max_number_of_tiles_before_letter &&  // and the number of tiles before the letter are valid
-                       Utilities.HasTilesForWord(s, this.letter, AI_tiles) )                // and the AI has tiles to play this word
+                    if (s_true_len > longest_word_true_len)
                     {
-                        this.longest_word = s;
+                        int word_placement_letter_index = s.IndexOf(this.letter); // Index of the letter we're building off of
+                        int number_of_tiles_after_letter = s.Length - 1 - word_placement_letter_index; // Number of tiles after the letter we're building off of
+                        int max_number_of_tiles_after_letter = this.end - lpos; // Maximum number of tiles allowed after the letter we're building off of
+                        int max_number_of_tiles_before_letter = lpos - this.start; // Maximum number of tiles allowed before the letter we're building off of
+
+                        // If p.letter exists in the word and its index is less than the index of the letter we're building off of
+                        if (word_placement_letter_index >= 0 &&                                 // If p.letter exists in the word
+                           word_placement_letter_index <= lpos &&                               // and comes before the letter we're building off of
+                           number_of_tiles_after_letter <= max_number_of_tiles_after_letter &&  // and the number of tiles after the letter are valid
+                           word_placement_letter_index <= max_number_of_tiles_before_letter &&  // and the number of tiles before the letter are valid
+                           AI.HasTilesForWord(s, this.letter))                                  // and the AI has tiles to play this word
+                        {
+                            this.longest_word = s;
+                            longest_word_true_len = s_true_len;
+                        }
                     }
                 }
             }

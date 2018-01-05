@@ -14,32 +14,34 @@ using System.Windows.Forms;
 using System.Web.Http;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Converters;
- 
 using System.Threading;
 using System.Threading.Tasks;
 
 // Upwords Gameboard programmed by Christopher Parks (cparks13@live.com)
-// 9/13/16 6:45 PM : Current AI strategy : AI will play the first move if able to, and will attempt to randomize the first move without sacrificing points.
-// When given the ability to make consecutive moves, the AI will build the longest words it can off of one letter tile on the board (currently unable to make a word with multiple free tiles)
-
-// AI workings: 9/15/16 3:45 PM : Changed AI to modify the dictionary to remove unplayable words (like "NIQAB") and replace the sequence "QU" with "Q" in words that have it so the AI can understand it.
 
 // TO-DO : 
 //         Update move making algorithms to become able to make moves off of more than just 1 tile at a time.
-//         Add scoring calculator. 'Qu' moves are 2 bonus points if not stacking, but no bonus if stacking
-//                                  Additionally, if you can play all 7 tiles at once you get 20 points (7 letter words can ONLY be played after the first turn, as a connecting move)
-//                                  Stacking : 
+//         Verify scoring calculator
 //
-// 12/9, 12/10/17: Began making portions of the code more readable by making it more object oriented. (Created Tile and GraphicTile objects, converted AI tile hand to use those instead of two arrays)
-// 12/16/17: Removed dead code from Form1.cs that was made obsolete by the object orientation.
 
 namespace UpwordsAI
 {
     public partial class Form1 : Form
     {
+        /// <summary>
+        /// List of longest times required to make a play. Utilized during "Continuous Play" mode.
+        /// </summary>
         List<long> longestplays = new List<long>();
+
+        /// <summary>
+        /// List of shortest times required to make a play. Utilized during "Continuous Play" mode.
+        /// </summary>
         List<long> shortestplays = new List<long>();
-        int score = 0; // AI will keep track of its own score for sims
+
+        /// <summary>
+        /// AI's current calculated score.
+        /// </summary>
+        int score = 0;
 
         volatile bool playing = false; // Variable used to determine if the AI is currently playing a game til the end
         volatile bool continuousplay = false; // Variable used to determine if the AI should keep playing games over and over
@@ -48,6 +50,8 @@ namespace UpwordsAI
         volatile int turn = -1; // Variable used to remember the current player turn
 
         const char BLANK_LETTER = '~';
+
+        ComputerPlayer AI = new ComputerPlayer();
 
 #if   SCHOOL_COMPUTER
         const string DICTIONARY_PATH = "Z:\\dictionary.txt";
@@ -169,6 +173,10 @@ namespace UpwordsAI
             dictionary = tempd.ToArray(); // Replace the loaded dictionary with the new fixed dictionary.
         }
 
+        /// <summary>
+        /// Function under construction that will attempt to use Regex to select playable words.
+        /// Also needs to bridge words together if possible.
+        /// </summary>
         private void FindNextMove3() // This function finds possible moves the AI can make after the first turn and plays them, where a move is considered to be building an entirely new word off of one or multiple words.
         {
             List<string> regexes=new List<string>();
@@ -400,7 +408,7 @@ namespace UpwordsAI
             return cends.Exists(x => x > -1) || cend != -1; // If all the possible row starting positions are -1 then we cannot build a word at all CAP : This isn't necessarily true. Modify this to look into possibility of adding onto words
         }
 
-        private string FindNextMove2() // This function finds the next possible move (After the first) move that the AI can make, where a move is considered to be building an entirely new word off of an old one
+        private PossibleWordPlacement FindNextMove2() // This function finds the next possible move (After the first) move that the AI can make, where a move is considered to be building an entirely new word off of an old one
         {
             List<PossibleWordPlacement> PossibleWordPlacements = new List<PossibleWordPlacement>(); // List of "PossibleWordPlacement" objects that holds information on the words we can place and where we can place them.
             List<NewPossibleWordPlacement> NewPossibleWordPlacements = new List<NewPossibleWordPlacement>(); // List of "NewPossibleWordPlacement" objects that holds information on the words we can place and where we can place them. Enables 2+ tile placements
@@ -436,48 +444,10 @@ namespace UpwordsAI
 
             foreach (PossibleWordPlacement p in PossibleWordPlacements)
             {
-                p.SetLongestWord(AI_tiles, dictionary);
+                p.SetBestWord(AI, dictionary);
             }
 
-            string best_word = PossibleWordPlacements.Select(x=>x.longest_word).Aggregate("", (max, cur) => max.Length > cur.Length ? max : cur); // Grab the longest word
-
-            return best_word != "" ? best_word : BLANK_LETTER.ToString(); // Return the best_word if it's valid, else return a blank.
-        }
-
-        public bool HasTilesForWord(string w, char given) // This function assumes there is only one tile we're building off of (one given tile)
-        {
-            foreach (char c in w)
-            {
-                if (c == given) // This if statement takes into account the fact that we don't need the tile we're playing off of to play a word.
-                {
-                    if (w.Count(x => x == c) - 1 > AI_tiles.Count(x => x.letter_value == c)) // Ensures AI has the tiles needed to play this word
-                        return false; // Word unplayable, not enough tiles
-                }
-                else
-                {
-                    if (w.Count(x => x == c) > AI_tiles.Count(x => x.letter_value == c)) // Ensures AI has the tiles needed to play this word
-                        return false; // Word unplayable, not enough tiles
-                }
-            }
-            return true;
-        }
-
-        public bool HasTilesForWord(string w, char[] given) // This function takes in an array of all the characters that are given to us
-        {
-            foreach (char c in w)
-            {
-                if (given.Contains(c)) // This if statement takes into the account that we don't need the tiles we're playing off of to play a word.
-                {
-                    if (w.Count(x => x == c) - given.Count(x => x == c) > AI_tiles.Count(x => x.letter_value == c)) // Ensures the AI has the tiles needed to play this word
-                        return false; // Word unplayable because even with the given characters, the AI still doesn't have enough tiles to play the word
-                }
-                else // New tile required for a word play
-                {
-                    if (w.Count(x => x == c) > AI_tiles.Count(x => x.letter_value == c)) // Ensures AI has the tiles needed to play this word
-                        return false;// Word unplayable, not enough tiles
-                }
-            }
-            return true;
+            return PossibleWordPlacements.Aggregate(PossibleWordPlacements[0], (max, cur) => max.longest_word.Length > cur.longest_word.Length ? max : cur); // Return the word placement with the longest word
         }
 
         private bool SearchForSpace(string word, out int[] pos, bool dir) // Searches for space for words to be played without making ANY connections.
@@ -524,22 +494,34 @@ namespace UpwordsAI
             }
         }
 
-        private string FindLongestPlayableWord2(string[] dict) // Finds longest playable word in the dictionary by looking at the AI's tileset.
+        /// <summary>
+        /// Function that returns the longest word in the dictionary that the AI has tiles for. Considers a Q tile to be length of '2'.
+        /// </summary>
+        /// <param name="dict">Dictionary of words to look through.</param>
+        /// <param name="min_len">Minimum length, inclusive.</param>
+        /// <param name="max_len">Maximum length, inclusive.</param>
+        /// <returns>Word found if function found a playable word, BLANK_LETTER.ToString() if it couldn't find any.</returns>
+        private string FindLongestPlayableWord2(string[] dict, int min_len, int max_len) // Finds longest playable word in the dictionary by looking at the AI's tileset.
         { // CAP : This function is faster than a human, but terrible in terms of speed when matched against computers.
-            List<string> playable_words = new List<string>();
+            string longest_word = "";       // Keep track of the longest word
+            int longest_word_true_len = 0;  // Used to keep track of the longest word's "true" length, where a Q tile is considered to be worth more.
+
             foreach (string word in dict) // Cycle through each word in the dictionary
             {
-                if (HasTilesForWord(word, BLANK_LETTER))
-                    playable_words.Add(word);
+                if (word.Length >= min_len && word.Length <= max_len)
+                {
+                    int word_true_len = word.Length + (word.Contains("Q") ? 1 : 0);
+                    if (word_true_len > longest_word_true_len && AI.HasTilesForWord(word, BLANK_LETTER))
+                    {
+                        longest_word = word;
+                        longest_word_true_len = word_true_len;
+                    }
+                }
             }
-            if (playable_words.Count > 0)
-            {
-                playable_words = playable_words.OrderByDescending(x => x.Length).ToList();
-                return playable_words[0];
-            }
-            else
-                return BLANK_LETTER.ToString(); // This tells the programmer/AI there was no playable word, given the tileset.
 
+            // If there was no valid word available, then
+            // return a blank letter to notify there was no choice.
+            return longest_word != "" ? longest_word : BLANK_LETTER.ToString();
         }
 
         private void AI_PlaceTile(char c, int[] pos, bool update=false) // position array assumes form of { row, column }
@@ -581,12 +563,6 @@ namespace UpwordsAI
         { // The boolean "dir" determines the direction of the word placement, where TRUE is 
             if (word != BLANK_LETTER.ToString() && word.Length > 1) // Make sure we're not trying to play a blank word or an invalid word
             {
-                score += (word.Contains('Q')) ? word.Length * 2 + 2 : word.Length * 2;
-                if (scoreLBL.InvokeRequired)
-                    scoreLBL.Invoke(new MethodInvoker(delegate { scoreLBL.Text = "Score: " + score.ToString(); }));
-                else
-                    scoreLBL.Text = "Score: " + score.ToString();
-
                 if (dir) // Vertical
                 { // When placing a word vertically, you are working in one column and moving DOWN the rows.
                     for (int i = 0; i < word.Length; i++)
@@ -602,11 +578,7 @@ namespace UpwordsAI
             }
             else
             {
-                string msg = "[!] AI attempted to place a blank word.";
-                if (logboxTB.InvokeRequired) // Need to do this because of multithreading.
-                    logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += msg; }));
-                else
-                    logboxTB.Text += msg;
+                Log_Box_Post_Message("[!] AI attempted to place a blank word.");
             }
         }
 
@@ -636,10 +608,7 @@ namespace UpwordsAI
                         AI_PlaceTile(word[i], new int[] { r, c + i });
 
                 score += (word.Contains('Q')) ? word.Length * 2 + 2 : word.Length * 2;
-                if (scoreLBL.InvokeRequired)
-                    scoreLBL.Invoke(new MethodInvoker(delegate { scoreLBL.Text = "Score: " + score.ToString(); }));
-                else
-                    scoreLBL.Text = "Score: " + score.ToString();
+                Set_score_lbl_score(score);
             }
             else if (word.Length > 2)
             { // If the word is 5 letters or shorter, and at least 3 letters, then we don't need to worry about constraints.
@@ -654,10 +623,7 @@ namespace UpwordsAI
                         AI_PlaceTile(word[i], new int[] { pos[0], pos[1] + i });
 
                 score += (word.Contains('Q')) ? word.Length * 2 + 2 : word.Length * 2;
-                if (scoreLBL.InvokeRequired)
-                    scoreLBL.Invoke(new MethodInvoker(delegate { scoreLBL.Text = "Score: " + score.ToString(); }));
-                else
-                    scoreLBL.Text = "Score: " + score.ToString();
+                Set_score_lbl_score(score);
             }
             else
                 MessageBox.Show("The AI could not make a first turn!");
@@ -670,7 +636,8 @@ namespace UpwordsAI
         /// <summary>
         /// Gives the AI tiles from a local tile bag. Not to be used in tournament plays.
         /// </summary>
-        private void GiveAITiles()
+        /// <returns>True if a tile was available, false otherwise.</returns>
+        private bool GiveAITiles()
         {
             foreach(GraphicTile ai_tile in AI_tiles.Where(x=>x.IsBlank))  // Loop through all blank spaces in the AI's tile hand
             {
@@ -681,26 +648,31 @@ namespace UpwordsAI
                 else
                 {
                     MessageBox.Show("The tile bag is empty.", "No more tiles");
-                    break;
+                    return false;
                 }
             }
+            return true;
         }
 
         // NOTE: There's a bug in this function where it is not placing words.
         private void aiplacewordBUT_Click(object sender, EventArgs e)
-        { // When the AI places tiles, the program must then set them to "blank character".
-            int[] pos = new int[2];
-            string word = "";
+        { // When the AI places tiles, the program must then set the tiles used to "blank character".
+            string word;
 
             if (firstturn) // If the AI is taking the first turn
             {
-                word = FindLongestPlayableWord2(dictionary.Where(x => x.Length >= 3 && x.Length <= 6).ToArray());
+                word = FindLongestPlayableWord2(dictionary, 3, 6);
                 AI_PlaceFirstWord(word);
                 firstturn = false;
             }
             else
             {
-                word = FindNextMove2();
+                PossibleWordPlacement next_word_placement = FindNextMove2();
+                word = next_word_placement.longest_word;
+                AI_PlaceWord(next_word_placement);
+
+                score += next_word_placement.Score();
+                Set_score_lbl_score(score);
             }
 
             if (word != BLANK_LETTER.ToString())
@@ -969,10 +941,9 @@ namespace UpwordsAI
             if (PossibleStackPlays.Count > 0)
             {
                 AI_PlaceStack(PossibleStackPlays[0]);
-                if (logboxTB.InvokeRequired)
-                    logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += "STACK PLAY: " + PossibleStackPlays[0].pwords[0] + "\r\n"; }));
-                else
-                    logboxTB.Text += "STACK PLAY: " + PossibleStackPlays[0].oldword.Replace("Q", "QU") + " TO " + PossibleStackPlays[0].pwords[0].Replace("Q", "QU") + "\r\n";
+                score += PossibleStackPlays[0].Score(gameboard);
+                Set_score_lbl_score(score);
+                Log_Box_Post_Message($"STACK PLAY: {PossibleStackPlays[0].pwords[0]}\r\n");
             }
         }
 
@@ -1053,45 +1024,24 @@ namespace UpwordsAI
             playing = true;
             long longestplay = 0; // Holds the time of the longest play in milliseconds
             long shortestplay = long.MaxValue; // Holds the time of the shortest play in milliseconds
+            bool tiles_left = true;
 
-            if (logboxTB.InvokeRequired)
-                logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text = ""; }));
-            else
-                logboxTB.Text = "";
+            string play_message = "";
 
-            int[] pos = new int[2];
-            string word = "";
+            Clear_Log_Box();
 
             do
             {
                 System.Diagnostics.Stopwatch stpw = new System.Diagnostics.Stopwatch();
                 stpw.Start();
 
-                string tile_hand = new string(AI_tiles.Select(x=>x.letter_value).ToArray()); // Convert the AI's tile letters to a printable string
-                string message = $"TILE HAND: {tile_hand}\r\n";
+                // Post tile hand to logging text box
+                Log_Box_Post_Message($"TILE HAND: {new string(AI_tiles.Select(x=>x.letter_value).ToArray())}\r\n");
 
-                if (logboxTB.InvokeRequired)
-                    logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += message; }));
-                else
-                    logboxTB.Text += message;
-
-                if (firstturn) // If the AI is taking the first turn
+                play_message = AIBestPlayChoice();
+                if (play_message != "NO PLAY")
                 {
-                    word = FindLongestPlayableWord2(dictionary.Where(x => x.Length >= 3 && x.Length <= 6).ToArray());
-                    AI_PlaceFirstWord(word);
-                    firstturn = false;
-                }
-                else
-                {
-                    word = FindNextMove2();
-                }
-
-                if (word != BLANK_LETTER.ToString())
-                {
-                    if (logboxTB.InvokeRequired)
-                        logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += "ATTEMPTED WORD: " + word.Replace("Q", "QU") + " (" + stpw.ElapsedMilliseconds.ToString() + " ms)\r\n"; }));
-                    else
-                        logboxTB.Text += "ATTEMPTED WORD: " + word.Replace("Q", "QU") + " (" + stpw.ElapsedMilliseconds.ToString() + " ms)\r\n";
+                    Log_Box_Post_Message($"{play_message} ({stpw.ElapsedMilliseconds.ToString()} ms)\r\n");
 
                     if (stpw.ElapsedMilliseconds > longestplay)
                         longestplay = stpw.ElapsedMilliseconds;
@@ -1100,21 +1050,37 @@ namespace UpwordsAI
                 }
                 else
                 {
-                    if (logboxTB.InvokeRequired)
-                        logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += "FINISHED.\r\n"; }));
-                    else
-                        logboxTB.Text += "FINISHED.\r\n";
+                    Log_Box_Post_Message($"FINISHED.\r\nLONGEST PLAY: {longestplay}\r\nSHORTEST PLAY:{shortestplay}\r\n");
                 }
 
-                GiveAITiles();
+                if (tiles_left)
+                {
+                    tiles_left = GiveAITiles();
+                }
             }
-            while (!word.Equals(BLANK_LETTER.ToString()));
+            while (!play_message.Equals("NO PLAY"));
 
             longestplays.Add(longestplay);
             shortestplays.Add(shortestplay);
             playing = false;
 
             return; // Required for multithreading operations. If this return was not here, thread.join() would stay frozen in its calling thread
+        }
+
+        private void Clear_Log_Box()
+        {
+            if (logboxTB.InvokeRequired)
+                logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text = ""; }));
+            else
+                logboxTB.Text += "";
+        }
+
+        private void Log_Box_Post_Message(string message)
+        {
+            if (logboxTB.InvokeRequired)
+                logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += message; }));
+            else
+                logboxTB.Text += message;
         }
 
         private void resetgameBUT_Click(object sender, EventArgs e)
@@ -1129,10 +1095,7 @@ namespace UpwordsAI
             GiveAITiles(); // Hand AI tiles
 
             score = 0;
-            if (scoreLBL.InvokeRequired)
-                scoreLBL.Invoke(new MethodInvoker(delegate { scoreLBL.Text = "Score: " + score.ToString(); }));
-            else
-                scoreLBL.Text = "Score: " + score.ToString();
+            Set_score_lbl_score(score);
         }
 
         private void stopautoplayBUT_Click(object sender, EventArgs e)
@@ -1180,20 +1143,19 @@ namespace UpwordsAI
                             tournamentscoreLBL.Invoke(new MethodInvoker(delegate { tournamentscoreLBL.Text = "T Score: " + g.myPayload.Score.ToString(); }));
                         else
                             tournamentscoreLBL.Text = "T Score: " + g.myPayload.Score.ToString();
-                        if (logboxTB.InvokeRequired)
-                            logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += "It is currently user " + g.myPayload.Turn.ToString() + "'s turn.\r\n"; }));
-                        else
-                            logboxTB.Text += "It is currently user " + g.myPayload.Turn.ToString() + "'s turn.\r\n";
+                        Log_Box_Post_Message($"It is currently user {g.myPayload.Turn.ToString()}'s turn.\r\n");
                     }
                 }
             } while ((turn != myID || myID == -1 || turn == -1) && playing); // Retrieves gamestate continuously until it is your turn.
-            if(!playing)
-                if (logboxTB.InvokeRequired)
-                    logboxTB.Invoke(new MethodInvoker(delegate { logboxTB.Text += "Game over.\r\n"; }));
-                else
-                    logboxTB.Text += "Game over.\r\n";
+
+            if (!playing)
+            {
+                Log_Box_Post_Message("Game over.\r\n");
+            }
+
             AIBestPlayChoice(); // After it is our turn we will play our best move
             AI_SendMove();
+
             return; // Ensures the thread is killed
         }
 
@@ -1262,7 +1224,11 @@ namespace UpwordsAI
             GetGameState();
         }
 
-        private void AIBestPlayChoice()
+        /// <summary>
+        /// Function that will play the best move the AI can think of.
+        /// </summary>
+        /// <returns>A message indicating the type of move made and the new word formed.</returns>
+        private string AIBestPlayChoice()
         {
             //WER: Using the same code as FindNextMove2 but only to retrieve the best play (called pbestreg) to compare scores later
             if (!firstturn)
@@ -1303,28 +1269,28 @@ namespace UpwordsAI
                 // NOTE: Known issue with this routine: doesn't account for Q being worth 2 more points
                 foreach (PossibleWordPlacement p in PossibleWordPlacements)
                 {
-                    p.SetLongestWord(AI_tiles, dictionary);
+                    p.SetBestWord(AI, dictionary);
                 }
 
                 PossibleWordPlacements = PossibleWordPlacements.Where(x => x.longest_word != "").OrderByDescending(x => x.longest_word.Length).ToList(); // Trim any possible placements with no playable word
 
-                int pregular;
+                int best_word_play_score;
                 PossibleWordPlacement pbestreg = null;
                 if (PossibleWordPlacements.Count > 0) // We cannot place any words if there are no possible placements
                 {
                     pbestreg = PossibleWordPlacements[0];
                     if (pbestreg.longest_word != "") // Verify the longest_word is a valid word
                     {
-                        pregular = pbestreg.Score();
+                        best_word_play_score = pbestreg.Score();
                     }
                     else
                     {
-                        pregular = 0;
+                        best_word_play_score = 0;
                     }
                 }
                 else
                 {
-                    pregular = 0;
+                    best_word_play_score = 0;
                 }
 
                 //WER: Similar to regular play copied code from AIPlayStack is used to get the score of the best stack play available
@@ -1370,43 +1336,62 @@ namespace UpwordsAI
                         PossibleStackPlays.Add(new PossibleWordStackPlacement(p.dir, p.row, p.column, p.word, words));
                 }
                 PossibleStackPlays = PossibleStackPlays.OrderByDescending(x => x.Score(gameboard)).ToList(); // Orders stack plays by score
-                int beststackscore;
+                int best_stack_play_score;
                 PossibleWordStackPlacement beststackselect = null;
                 if (PossibleStackPlays.Count > 0)
                 {
                     beststackselect = PossibleStackPlays[0];
-                    beststackscore = beststackselect.Score(gameboard);
+                    best_stack_play_score = beststackselect.Score(gameboard);
                 }
                 else
                 {
-                    beststackscore = 0;
+                    best_stack_play_score = 0;
                 }
 
                 //Compare beststack to pregular (scores for best stack and regular play) to decide which to play
-                if (beststackscore != 0 || pregular != 0)
+                if (best_stack_play_score != 0 || best_word_play_score != 0)
                 {
-                    if (pregular < beststackscore)
+                    if (best_word_play_score < best_stack_play_score)
                     {
                         AI_PlaceStack(beststackselect);
-                        score += beststackscore;
 
-                        if (scoreLBL.InvokeRequired)
-                            scoreLBL.Invoke(new MethodInvoker(delegate { scoreLBL.Text = "Score: " + score.ToString(); }));
-                        else
-                            scoreLBL.Text = "Score: " + score.ToString();
+                        score += best_stack_play_score;
+                        Set_score_lbl_score(score);
+
+                        return $"STACK PLAY: {beststackselect.oldword} -> {beststackselect.pwords[0]} ({best_stack_play_score})";
                     }
                     else
                     {
                         AI_PlaceWord(pbestreg);
+
+                        score += best_word_play_score;
+                        Set_score_lbl_score(score);
+
+                        return $"WORD PLAY: {pbestreg.longest_word} ({best_word_play_score})";
                     }
+                }
+                else
+                {
+                    return "NO PLAY";
                 }
             }
             else
             {
-                string word = FindLongestPlayableWord2(dictionary.Where(x => x.Length >= 3 && x.Length <= 6).ToArray());
+                // Limit word choices to at least 3 tiles because the first move MUST be at least 3 tiles.
+                // Limit word choices to a maximum of 6 tiles because 7-10 tiles cannot fit in the first play.
+                string word = FindLongestPlayableWord2(dictionary, 3, 6);
                 AI_PlaceFirstWord(word);
                 firstturn = false;
+                return $"WORD PLAY: {word} ({word.Length * 2 + (word.Contains("Q") ? 2 : 0)})";
             }
+        }
+
+        public void Set_score_lbl_score(int new_score)
+        {
+            if (scoreLBL.InvokeRequired)
+                scoreLBL.Invoke(new MethodInvoker(delegate { scoreLBL.Text = "Score: " + new_score.ToString(); }));
+            else
+                scoreLBL.Text = "Score: " + new_score.ToString();
         }
 
         private void aiplaybestBUT_Click(object sender, EventArgs e)
