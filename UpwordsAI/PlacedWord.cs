@@ -8,12 +8,30 @@ namespace UpwordsAI
 {
     class PlacedWord
     {
-        public bool dir; // Indicates the direction the word was placed in. TRUE = VERTICAL, FALSE = HORIZONTAL
-        public string word; // Indicates the word in string form.
-        public int row; // Indicates the row of the starting tile
-        public int column; // Indicates the column of the starting tile
+        /// <summary>
+        /// Indicates the direction the word was placed in. TRUE = VERTICAL, FALSE = HORIZONTAL
+        /// </summary>
+        public bool dir;
 
-        public int Length // Returns the length of a placed word
+        /// <summary>
+        /// Indicates the word in string form.
+        /// </summary>
+        public string word;
+
+        /// <summary>
+        /// Indicates the row of the tile of the first letter in the word.
+        /// </summary>
+        public int row;
+
+        /// <summary>
+        /// Indicates the column of the tile of the first letter in the word.
+        /// </summary>
+        public int column; 
+
+        /// <summary>
+        /// Returns the length of the word placed.
+        /// </summary>
+        public int Length
         { get { return word.Length; } }
 
         /// <summary>
@@ -40,6 +58,7 @@ namespace UpwordsAI
         {
             return left.column != right.column || left.row != right.row || left.dir != right.dir;
         }
+
         public static bool operator ==(PlacedWord left, PlacedWord right)
         {
             return left.column == right.column && left.row == right.row && left.dir == right.dir;

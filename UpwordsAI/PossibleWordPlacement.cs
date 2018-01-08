@@ -166,7 +166,7 @@ namespace UpwordsAI
         public string oldword;
 
         /// <summary>
-        /// Constructor function that will create a new object of type PossibleStackPlacement that is used to assist the AI with making stack plays.
+        /// Constructor function that will create a new object of type PossibleWordStackPlacement that is used to assist the AI with making stack plays.
         /// </summary>
         /// <param name="row">Row of the tile to be stacked.</param>
         /// <param name="column">Column of the tile to be stacked.</param>
@@ -181,11 +181,12 @@ namespace UpwordsAI
         }
 
         /// <summary>
-        /// Calculates and returns the score of this possible stack move.
+        /// Calculates and returns the score of this possible stack move, based on the current stack level and number of changes.
+        /// Score increases by 1 for each tile changed.
         /// </summary>
         /// <param name="gameboard">The gameboard's current state.</param>
         /// <returns>The number of points to be gained from playing this move.</returns>
-        public int Score(GraphicTile[,] gameboard) //Similar to ScoreCalcReg this calculates the score for a stack play based on the current stack level and the number of changes (increase score by 1 for each change)
+        public int Score(GraphicTile[,] gameboard)
         {
             int stackscore = 0;
             if (this.dir)

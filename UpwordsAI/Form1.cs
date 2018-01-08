@@ -877,8 +877,12 @@ namespace UpwordsAI
         public bool ContainsEnoughLetters(string word, string oldword) // Function allows us to tell if given n wildcards, whether or not we can play this word
         { // If using this function to determine if a new word can be played in a stack play, make sure n is less than or equal to the previous word length minus 1. You cannot cover all tiles in one play.
             int discrepencies = 0;  // Number of character differences between word and oldword
-            if (word == oldword)
+
+            if (word == oldword) // To play a stack move, the words must be different.
+            {
                 return false;
+            }
+
             if (word.Length == oldword.Length) // Word lengths must be the same to play word on top of oldword
             {
                 for (int i = 0; i < word.Length; i++)
@@ -887,12 +891,15 @@ namespace UpwordsAI
                     {
                         if (AI.tileset.Count(x => x.letter_value == word[i]) < word.Count(x => x == word[i])) // If the AI has less tiles of this kind than is required to play the new word
                             return false; // Then we can't play the word
+
                         discrepencies++;
                     }
                 }
             }
             else
+            {
                 return false;
+            }
 
             return (discrepencies == oldword.Length) ? false : true; // A new stack word must contain AT LEAST 1 TILE from the old word.
         }
@@ -1000,6 +1007,7 @@ namespace UpwordsAI
         {
             ResetGame();
         }
+
         private void ResetGame()
         {
             AI.ResetTileHand(); // Clear the AI's tile hand
@@ -1097,24 +1105,39 @@ namespace UpwordsAI
                 }
         }
 
+        /// <summary>
+        /// Function that translates the Tournament Adjudicator's board to our own board format, and then sets the board state.
+        /// </summary>
+        /// <param name="board">Tournament Adjudicator formatted board.
+        ///                     Should be a 3D array where the first dimension switches between letter (0) and stack (1).
+        ///                     The other two dimensions correspond to board position.
+        /// </param>
         private void SetAIBoardState(string[,,] board)
         {
-            if (board != null)
-                for (int r = 0; r < 10; r++) // Row
-                    for (int c = 0; c < 10; c++) // Column
+            if (board != null) // If we've received a valid board
+            {
+                for (int r = 0; r < 10; r++) // Loop through all rows
+                {
+                    for (int c = 0; c < 10; c++) // Loop through each column for each row
                     {
                         char letter = (board[0, r, c] != null) ? board[0, r, c][0] : BLANK_LETTER;  // If the letter is NULL, set it to BLANK. Otherwise set it to the letter it represents.
                         sbyte stack_level = sbyte.Parse(board[1, r, c] ?? "0"); // If the stack level is NULL, set it to 0. Else, parse whatever it is and set it.
                         gameboard[r, c].DrawTile(letter, stack_level);  // Set tile letter and stack level, draw the tile.
                     }
+                }
+            }
 
-            if (firstturn)
-                foreach(GraphicTile tile in gameboard)
-                    if(!tile.IsBlank)   // If any tiles are filled
+            if (firstturn) // If we believe it's our first turn, then verify it truly is.
+            {
+                foreach (GraphicTile tile in gameboard)
+                {
+                    if (!tile.IsBlank)   // If any tiles are filled
                     {
-                        firstturn = false; // Then we are not making the first move!
+                        firstturn = false; // Then we are not actually making the first move!
                         break;
                     }
+                }
+            }
         }
 
         private void sendmoveBUT_Click(object sender, EventArgs e)
@@ -1122,6 +1145,7 @@ namespace UpwordsAI
             playing = true;
             AI_SendMove();
         }
+
         private void AI_SendMove()
         {
             g.PlayMove(gameboard).GetAwaiter().OnCompleted(
