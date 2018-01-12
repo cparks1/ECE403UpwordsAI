@@ -229,13 +229,13 @@ namespace UpwordsAI
 
         }
 
-        public async Task PlayMove(GraphicTile[,] board)
+        public async Task PlayMove(Gameboard gameboard)
         {
             for(int r=0; r<10; r++)
                 for(int c=0; c<10; c++)
                 {
-                    myPayload.Board[1, r, c] = board[r, c].stack_value.ToString();
-                    myPayload.Board[0, r, c] = (board[r, c].IsBlank) ? null : (board[r, c].letter_value == 'Q') ? "Qu" : board[r, c].letter_value.ToString();
+                    myPayload.Board[1, r, c] = gameboard.board[r, c].stack_value.ToString();
+                    myPayload.Board[0, r, c] = (gameboard.board[r, c].IsBlank) ? null : (gameboard.board[r, c].letter_value == 'Q') ? "Qu" : gameboard.board[r, c].letter_value.ToString();
                 }
 
             await SendMove();

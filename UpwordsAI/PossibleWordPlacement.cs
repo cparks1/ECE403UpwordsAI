@@ -186,21 +186,21 @@ namespace UpwordsAI
         /// </summary>
         /// <param name="gameboard">The gameboard's current state.</param>
         /// <returns>The number of points to be gained from playing this move.</returns>
-        public int Score(GraphicTile[,] gameboard)
+        public int Score(Gameboard gameboard)
         {
             int stackscore = 0;
             if (this.dir)
             {
                 for (int rcount = this.r; rcount <= this.oldword.Length + this.r - 1; rcount++)
                 {
-                    stackscore += gameboard[rcount, this.c].stack_value;
+                    stackscore += gameboard.board[rcount, this.c].stack_value;
                 }
             }
             else
             {
                 for (int ccount = this.c; ccount <= this.oldword.Length + this.c - 1; ccount++)
                 {
-                    stackscore += gameboard[this.r, ccount].stack_value;
+                    stackscore += gameboard.board[this.r, ccount].stack_value;
                 }
             }
             int changes = Utilities.NumberDifferentLetters(this.oldword, this.pwords[0]);

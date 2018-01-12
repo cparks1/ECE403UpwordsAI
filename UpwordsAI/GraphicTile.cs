@@ -83,6 +83,14 @@ namespace UpwordsAI
             DrawTile();
         }
 
+        /// <summary>
+        /// Sets the tile to a blank tile.
+        /// </summary>
+        public void SetBlank()
+        {
+            DrawTile(BLANK_LETTER, 0);
+        }
+
         private void Tile_Click(object sender, EventArgs e) // Allows user to manually edit tiles
         {
             MouseEventArgs m = e as MouseEventArgs;

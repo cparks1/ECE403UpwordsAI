@@ -28,6 +28,9 @@ namespace UpwordsAI
 {
     public partial class Form1 : Form
     {
+        const int FIRST_GAMEBOARD_TILE_X_POS = 13;
+        const int FIRST_GAMEBOARD_TILE_Y_POS = 13;
+        const int GAMEBOARD_TILE_SPACING = 33;
         /// <summary>
         /// List of longest times required to make a play. Utilized during "Continuous Play" mode.
         /// </summary>
@@ -65,7 +68,7 @@ namespace UpwordsAI
 
         string[] dictionary = new string[0]; // String array that will hold the entire dictionary.
 
-        GraphicTile[,] gameboard = new GraphicTile[10, 10]; // 10x10 array of tiles visible to humans that stores data on the character and stack level of that tile.
+        Gameboard gameboard = new Gameboard(); // Construct the gameboard. Must be initialized.
 
         bool firstturn = true; // Boolean that determines if the AI will follow special rules for placing the first word.
 
@@ -77,26 +80,8 @@ namespace UpwordsAI
         {
             InitializeComponent();
             LoadDictionary(); // Loads up the dictionary given in DICTIONARY_PATH into a string array named dictionary
-            InitializeBoard(); // Draws the board and sets all tiles to blanks
+            gameboard.Initialize(this, FIRST_GAMEBOARD_TILE_X_POS, FIRST_GAMEBOARD_TILE_Y_POS, GAMEBOARD_TILE_SPACING); // Sets all tiles to blanks and draws the board.
             InitializeAITiles(); // Draws the AI's held tiles and sets them all to blanks
-        }
-
-        public void InitializeBoard()
-        {
-            int ypos = 13;
-            for (int r = 0; r < 10; r++) // This for loop iterates through each tile on the gameboard and creates the picturebox that will show the tile information
-            { // It also draws a blank tile onto each tile, and sets the machine readable tile as a blank tile
-                int xpos = 13;
-                for (int c = 0; c < 10; c++)
-                {
-                    Point location = new Point(xpos, ypos);
-                    gameboard[r, c] = new GraphicTile(location, $"({r.ToString()},{c.ToString()})", true); // (r,c)
-                    Controls.Add(gameboard[r, c].tile_box); // Add graphic tile's picturebox to form1's visible controls
-                    gameboard[r, c].DrawTile(BLANK_LETTER, 0); // Set this tile to a blank tile, and draw it.
-                    xpos += 33;
-                }
-                ypos += 33;
-            }
         }
 
         /// <summary>
@@ -104,7 +89,7 @@ namespace UpwordsAI
         /// </summary>
         public void InitializeAITiles()
         {
-            int xpos = gameboard[9, 1].tile_box.Left + 16, ypos = gameboard[9, 1].tile_box.Bottom + 32;
+            int xpos = gameboard.board[9, 1].tile_box.Left + 16, ypos = gameboard.board[9, 1].tile_box.Bottom + 32;
             for (int i = 0; i < AI.tileset.Length; i++)
             {
                 Point location = new Point(xpos, ypos);
@@ -185,7 +170,7 @@ namespace UpwordsAI
                 regex = "";
 
                 for (int c = 0; c < 10; c++)
-                    regex += (gameboard[r, c].letter_value == BLANK_LETTER) ? '.' : gameboard[r, c].letter_value; // Generate a regex capable of search
+                    regex += (gameboard.board[r, c].letter_value == BLANK_LETTER) ? '.' : gameboard.board[r, c].letter_value; // Generate a regex capable of search
 
                 bool hitlet = false; bool fronttrail = false;
 
@@ -216,7 +201,7 @@ namespace UpwordsAI
             {
                 regex = "";
                 for (int r = 0; r < 10; r++)
-                    regex += (gameboard[r, c].letter_value == BLANK_LETTER) ? '.' : gameboard[r, c].letter_value; // Generate a regex capable of search
+                    regex += (gameboard.board[r, c].letter_value == BLANK_LETTER) ? '.' : gameboard.board[r, c].letter_value; // Generate a regex capable of search
                 bool hitlet = false; bool fronttrail = false;
                 for (int i = 0; i < 10 && !hitlet; i++)
                     if (!hitlet && Char.IsLetter(regex[i])) // If we haven't found a letter yet (indicating we're still searching a trail) and we just found the end of the trail
@@ -249,25 +234,25 @@ namespace UpwordsAI
             rstarts = new List<int>(); // List that holds all the rstarting positions
             letters = new List<char>(); // List that holds all the letters we've run into
 
-            if (!gameboard[r, c].IsBlank) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
+            if (!gameboard.board[r, c].IsBlank) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
             {
                 if (r - 1 >= 0) // If we can check ABOVE the tile we're currently searching (We do this check to avoid an out of bounds exception)
                 {
-                    if (gameboard[r - 1, c].IsBlank) // This is part of the process of checking if we're able to build an entirely new vertical word.
+                    if (gameboard.board[r - 1, c].IsBlank) // This is part of the process of checking if we're able to build an entirely new vertical word.
                     {
                         rstart = r; // Set the initial starting row
                         for (int i = r - 1; i >= 0; i--) // Search all the rows behind
                         {
-                            letters.Add(gameboard[i, c].letter_value); // Add the letter we may be building off of
+                            letters.Add(gameboard.board[i, c].letter_value); // Add the letter we may be building off of
 
-                            if (gameboard[i, c].IsBlank) // Need a blank tile to place a word.
+                            if (gameboard.board[i, c].IsBlank) // Need a blank tile to place a word.
                             {
                                 if (c + 1 <= 9) // If we can search to the right
-                                    if (!gameboard[i, c + 1].IsBlank) // Verify we're not building next to other tiles CAP: Modify this so the function will check if it's a valid word
+                                    if (!gameboard.board[i, c + 1].IsBlank) // Verify we're not building next to other tiles CAP: Modify this so the function will check if it's a valid word
                                         break; // If we are break before rstart is set
 
                                 if (c - 1 >= 0) // If we can search to the left
-                                    if (!gameboard[i, c - 1].IsBlank) // Verify we're not building next to other tiles
+                                    if (!gameboard.board[i, c - 1].IsBlank) // Verify we're not building next to other tiles
                                         break; // If we are break before rstart is set
 
                                 rstart = i; // If the for loop is not yet broken then we set the row starting position higher
@@ -296,19 +281,19 @@ namespace UpwordsAI
 
             if (r + 1 <= 9) // If we can check BELOW the tile we're currently searching
             {
-                if (gameboard[r + 1, c].IsBlank) // This is part of the process of checking if we're able to build an entirely new vertical word.
+                if (gameboard.board[r + 1, c].IsBlank) // This is part of the process of checking if we're able to build an entirely new vertical word.
                 {
                     rend = r; // Set the initial ending row
                     for (int i = r + 1; i <= 9; i++) // Search all the rows ahead
                     {
-                        letters.Add(gameboard[i, c].letter_value); // Add the letter we may be building off of
-                        if (gameboard[i, c].IsBlank) // Need a blank tile to place a word.
+                        letters.Add(gameboard.board[i, c].letter_value); // Add the letter we may be building off of
+                        if (gameboard.board[i, c].IsBlank) // Need a blank tile to place a word.
                         {
                             if (c + 1 <= 9) // If we can search to the right
-                                if (!gameboard[i, c + 1].IsBlank) // Verify we're not building next to other tiles CAP: Modify this function to allow us to build next to other tiles if possible
+                                if (!gameboard.board[i, c + 1].IsBlank) // Verify we're not building next to other tiles CAP: Modify this function to allow us to build next to other tiles if possible
                                     break; // If we are break before rstart is set
                             if (c - 1 >= 0) // If we can search to the left
-                                if (!gameboard[i, c - 1].IsBlank) // Verify we're not building next to other tiles
+                                if (!gameboard.board[i, c - 1].IsBlank) // Verify we're not building next to other tiles
                                     break; // If we are break before rstart is set
 
                             rend = i;
@@ -335,19 +320,19 @@ namespace UpwordsAI
 
             if (c - 1 >= 0) // If we can check to the LEFT of the tile we're currently searching
             {
-                if (gameboard[r, c - 1].IsBlank) // If the tile to the left of it is a blank letter
+                if (gameboard.board[r, c - 1].IsBlank) // If the tile to the left of it is a blank letter
                 {
                     cstart = c; // Set the initial starting column
                     for (int i = c - 1; i >= 0; i--) // Search all the columns behind
                     {
-                        letters.Add(gameboard[r, i].letter_value); // Add the letter we may be building off of
-                        if (gameboard[r, i].IsBlank) // Need a blank tile to place a word.
+                        letters.Add(gameboard.board[r, i].letter_value); // Add the letter we may be building off of
+                        if (gameboard.board[r, i].IsBlank) // Need a blank tile to place a word.
                         {
                             if (r + 1 <= 9) // If we can search to the right
-                                if (!gameboard[r + 1, i].IsBlank) // Verify we're not building next to other tiles
+                                if (!gameboard.board[r + 1, i].IsBlank) // Verify we're not building next to other tiles
                                     break; // If we are break before rstart is set
                             if (r - 1 >= 0) // If we can search to the left
-                                if (!gameboard[r - 1, i].IsBlank) // Verify we're not building next to other tiles
+                                if (!gameboard.board[r - 1, i].IsBlank) // Verify we're not building next to other tiles
                                     break; // If we are break before rstart is set
 
                             cstart = i; // And set the starting column
@@ -375,19 +360,19 @@ namespace UpwordsAI
 
             if (c + 1 <= 9) // If we can check to the RIGHT of the tile we're currently searching
             {
-                if (gameboard[r, c + 1].IsBlank) // If the tile to the right of it is a blank letter
+                if (gameboard.board[r, c + 1].IsBlank) // If the tile to the right of it is a blank letter
                 {
                     cend = c;
                     for (int i = c + 1; i <= 9; i++) // Search all the columns ahead
                     {
-                        letters.Add(gameboard[r, i].letter_value);
-                        if (gameboard[r, i].IsBlank) // Need a blank tile to place a word.
+                        letters.Add(gameboard.board[r, i].letter_value);
+                        if (gameboard.board[r, i].IsBlank) // Need a blank tile to place a word.
                         {
                             if (r + 1 <= 9) // If we can search to the right
-                                if (!gameboard[r + 1, i].IsBlank) // Verify we're not building next to other tiles
+                                if (!gameboard.board[r + 1, i].IsBlank) // Verify we're not building next to other tiles
                                     break; // If we are break before rstart is set
                             if (r - 1 >= 0) // If we can search to the left
-                                if (!gameboard[r - 1, i].IsBlank) // Verify we're not building next to other tiles
+                                if (!gameboard.board[r - 1, i].IsBlank) // Verify we're not building next to other tiles
                                     break; // If we are break before rstart is set
 
                             cend = i; // And then set the ending column
@@ -417,7 +402,7 @@ namespace UpwordsAI
                     int rstart = -1, rend = -1, cstart = -1, cend = -1; // Used to keep track of the starting/ending position of a word
                     int[] pos = { r, c };
 
-                    if (!gameboard[r, c].IsBlank) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
+                    if (!gameboard.board[r, c].IsBlank) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
                     {
                         SearchUpward(pos, out List<int> rows, out List<char> rschars, out rstart); // Search in all four directions of the tile and record what we see
                         SearchDownward(pos, out List<int> rowe, out List<char> rechars, out rend); // as well as record valid data needed for word placement
@@ -426,14 +411,14 @@ namespace UpwordsAI
 
                         if (rstart != -1 && rend != -1 && rstart != rend) // If we can make a vertical word
                         {
-                            PossibleWordPlacements.Add(new PossibleWordPlacement(true, gameboard[r, c].letter_value, r, c, rstart, rend)); // Add the word to the list of possible word plays
+                            PossibleWordPlacements.Add(new PossibleWordPlacement(true, gameboard.board[r, c].letter_value, r, c, rstart, rend)); // Add the word to the list of possible word plays
 
                             List<char> lets = new List<char>(); lets.AddRange(rschars); lets.AddRange(rechars);
                             NewPossibleWordPlacements.Add(new NewPossibleWordPlacement(true, lets, r, c, rows, rowe));
                         }
                         if (cstart != -1 && cend != -1 && cstart != cend) // If we can make a horizontal word
                         {
-                            PossibleWordPlacements.Add(new PossibleWordPlacement(false, gameboard[r, c].letter_value, r, c, cstart, cend)); // Add the word to the list of possible word plays
+                            PossibleWordPlacements.Add(new PossibleWordPlacement(false, gameboard.board[r, c].letter_value, r, c, cstart, cend)); // Add the word to the list of possible word plays
 
                             List<char> lets = new List<char>(); lets.AddRange(cschars); lets.AddRange(cechars);
                             NewPossibleWordPlacements.Add(new NewPossibleWordPlacement(false, lets, r, c, cols, cole));
@@ -462,7 +447,7 @@ namespace UpwordsAI
                     blanktiles = 0; // Reset the number of blank tiles when searching in a new column
                     for (r = 0; r < 10; r++) // Iterate through the rows
                     {
-                        if (gameboard[r, c].IsBlank) // If there is a blank space for the AI to place a word
+                        if (gameboard.board[r, c].IsBlank) // If there is a blank space for the AI to place a word
                             blanktiles++;           // Count the number of blank spaces available
                         else
                             blanktiles = 0;
@@ -481,7 +466,7 @@ namespace UpwordsAI
                 {
                     blanktiles = 0;
                     for (c = 0; c < 10; c++)
-                        if (gameboard[r, c].IsBlank)
+                        if (gameboard.board[r, c].IsBlank)
                             blanktiles++;
                     if (blanktiles >= word.Length)
                     {
@@ -593,13 +578,8 @@ namespace UpwordsAI
         { AI.ResetTileHand(); }
 
         private void clearboardBUT_Click(object sender, EventArgs e)
-        { ClearGameboard(); }
-
-        private void ClearGameboard()
         {
-            for (int r = 0; r < 10; r++)
-                for (int c = 0; c < 10; c++)
-                    gameboard[r, c].DrawTile(BLANK_LETTER, 0);
+            gameboard.Reset();
             firstturn = true;
         }
 
@@ -627,19 +607,19 @@ namespace UpwordsAI
                         bool ca = (r - 1 >= 0), cb = (r + 1 <= 9), cl = (c - 1 >= 0), cr = (c + 1 <= 9); // Used to determine if we can check above, below, left, or right of the tile
                         int rstart = -1, rend = -1, cstart = -1, cend = -1; // Used to keep track of the starting/ending position of a word
                         string rstring = "", cstring = ""; // Strings that will be built as we search vertically/horizontally
-                        if (!gameboard[r, c].IsBlank && (!searched[0, r, c] || !searched[1, r, c])) // If the tile is not a blank letter and hasn't yet been searched then we will search it
+                        if (!gameboard.board[r, c].IsBlank && (!searched[0, r, c] || !searched[1, r, c])) // If the tile is not a blank letter and hasn't yet been searched then we will search it
                         { // The tile is not blank and hasn't been searched yet (either vertically or horizontally)
                             if (ca && !searched[0, r, c]) // If we're on a tile where we can search above it (row != 0)
                             { // If we can search the tiles above this and this tile hasn't yet been searched vertically
-                                if (!gameboard[r - 1, c].IsBlank && !searched[0, r - 1, c]) // If the tile above it is not a blank letter
+                                if (!gameboard.board[r - 1, c].IsBlank && !searched[0, r - 1, c]) // If the tile above it is not a blank letter
                                 {
                                     for (int i = r - 1; i >= 0; i--) // Go up in rows until you hit the end of the word
                                     {
-                                        if (!gameboard[i, c].IsBlank) // A letter tile has been placed here
+                                        if (!gameboard.board[i, c].IsBlank) // A letter tile has been placed here
                                         {
                                             searched[0, i, c] = true; // We will want to mark it as searched
                                             rstart = i; // And then set the starting row
-                                            rstring = rstring.Insert(0, gameboard[i, c].letter_value.ToString()); // Build the string
+                                            rstring = rstring.Insert(0, gameboard.board[i, c].letter_value.ToString()); // Build the string
                                         }
                                         else break; // If we've hit a blank tile then we want to break this for loop
                                     }
@@ -648,16 +628,16 @@ namespace UpwordsAI
 
                             if (cb && !searched[0, r, c]) // If we're on a tile where we can search below it (row != 9)
                             {
-                                if (!gameboard[r + 1, c].IsBlank && !searched[0, r + 1, c]) // If the tile below it is not a blank letter and hasn't been searched
+                                if (!gameboard.board[r + 1, c].IsBlank && !searched[0, r + 1, c]) // If the tile below it is not a blank letter and hasn't been searched
                                 {
                                     rstart = r;
                                     for (int i = r + 1; i <= 9; i++)
                                     {
-                                        if (!gameboard[i, c].IsBlank) // A letter tile has been placed here
+                                        if (!gameboard.board[i, c].IsBlank) // A letter tile has been placed here
                                         {
                                             searched[0, i, c] = true;                // We will want to mark it as searched
                                             rend = i;                                // And then set the ending row
-                                            rstring += gameboard[i, c].letter_value; // Build the string
+                                            rstring += gameboard.board[i, c].letter_value; // Build the string
                                         }
                                         else break; // If we've hit a blank tile then we want to break this for loop
                                     }
@@ -665,20 +645,20 @@ namespace UpwordsAI
                             }
 
                             searched[0, r, c] = true;
-                            rstring = rstring.Insert(0, gameboard[r, c].letter_value.ToString());
+                            rstring = rstring.Insert(0, gameboard.board[r, c].letter_value.ToString());
 
                             if (cl && !searched[1, r, c]) // If we're on a tile where we can search to the left of it (column != 0)
                             {
-                                if (!gameboard[r, c - 1].IsBlank && !searched[1, r, c - 1]) // If the tile to the left of it is not a blank letter
+                                if (!gameboard.board[r, c - 1].IsBlank && !searched[1, r, c - 1]) // If the tile to the left of it is not a blank letter
                                 {
                                     cstart = c;
                                     for (int i = c - 1; i >= 0; i++)
                                     {
-                                        if (!gameboard[r, i].IsBlank) // A letter tile has been placed here
+                                        if (!gameboard.board[r, i].IsBlank) // A letter tile has been placed here
                                         {
                                             searched[1, r, i] = true; // We will want to mark it as searched
                                             cstart = i; // And then set the starting column
-                                            cstring = cstring.Insert(0, gameboard[r, i].letter_value.ToString()); // Build the string
+                                            cstring = cstring.Insert(0, gameboard.board[r, i].letter_value.ToString()); // Build the string
                                         }
                                         else break; // If we've hit a blank tile then we want to break this for loop
                                     }
@@ -688,23 +668,23 @@ namespace UpwordsAI
 
                             if (cr && !searched[1, r, c]) // If we're on a tile where we can search to the right of it (column != 9)
                             {
-                                if (!gameboard[r, c + 1].IsBlank && !searched[1, r, c + 1]) // If the tile to the right of it is not a blank letter
+                                if (!gameboard.board[r, c + 1].IsBlank && !searched[1, r, c + 1]) // If the tile to the right of it is not a blank letter
                                 {
                                     cstart = c;
                                     for (int i = c + 1; i <= 9; i++)
                                     {
-                                        if (!gameboard[r, i].IsBlank) // A letter tile has been placed here
+                                        if (!gameboard.board[r, i].IsBlank) // A letter tile has been placed here
                                         {
                                             searched[1, r, i] = true; // We will want to mark it as searched
                                             cend = i; // And then set the ending column
-                                            cstring += gameboard[r, i].letter_value; // Build the string
+                                            cstring += gameboard.board[r, i].letter_value; // Build the string
                                         }
                                         else break; // If we've hit a blank tile then we want to break this for loop
                                     }
                                 }
                             }
 
-                            searched[1, r, c] = true; cstring = cstring.Insert(0, gameboard[r, c].letter_value.ToString());
+                            searched[1, r, c] = true; cstring = cstring.Insert(0, gameboard.board[r, c].letter_value.ToString());
 
                             if (rstart != -1 || rend != -1) // If we found a vertical word
                             {
@@ -760,7 +740,7 @@ namespace UpwordsAI
 
                     if (can_search_left) // If we can search left (if we can't, there is no word attached to the left)
                     {
-                        if (!gameboard[r, c - 1].IsBlank) // Doing this one comparison saves us time by checking if there is a word attached before trying to get it
+                        if (!gameboard.board[r, c - 1].IsBlank) // Doing this one comparison saves us time by checking if there is a word attached before trying to get it
                         {
                             WordsAttached.AddRange(WordsAttachedToTile(WordsOnBoard, new int[] { r, c }).Where(x => x != word));
                             found = true;
@@ -768,7 +748,7 @@ namespace UpwordsAI
                     }
                     if (can_search_right && !found) // If we can search right (if we can't, there is no word attached to the right) and haven't yet found a word
                     {
-                        if (!gameboard[r, c + 1].IsBlank) // Doing this one comparison saves us time
+                        if (!gameboard.board[r, c + 1].IsBlank) // Doing this one comparison saves us time
                         {
                             WordsAttached.AddRange(WordsAttachedToTile(WordsOnBoard, new int[] { r, c }).Where(x => x != word));
                         }
@@ -785,7 +765,7 @@ namespace UpwordsAI
 
                     if (can_search_above)     // If we can search above
                     {
-                        if (!gameboard[r - 1, c].IsBlank)   // If there's a letter on this tile
+                        if (!gameboard.board[r - 1, c].IsBlank)   // If there's a letter on this tile
                         {
                             WordsAttached.AddRange(WordsAttachedToTile(WordsOnBoard, new int[] { r, c }).Where(x => x != word));
                             found = true;
@@ -793,7 +773,7 @@ namespace UpwordsAI
                     }
                     if (can_search_below && !found)   // If we can search below, and we haven't found a word attached to the tile yet
                     {
-                        if (!gameboard[r + 1, c].IsBlank)   // If there's a letter on this tile
+                        if (!gameboard.board[r + 1, c].IsBlank)   // If there's a letter on this tile
                         {
                             WordsAttached.AddRange(WordsAttachedToTile(WordsOnBoard, new int[] { r, c }).Where(x => x != word));
                         }
@@ -837,13 +817,13 @@ namespace UpwordsAI
                 if (p.dir) // This if statement will prevent any words that would cause a stack level higher than 5 from being played.
                 {
                     for (int r = p.row; r < p.row + p.Length; r++)
-                        if (gameboard[r, p.column].stack_value >= 5)
+                        if (gameboard.board[r, p.column].stack_value >= 5)
                             words.RemoveAll(x => x[r - p.row] != p.word[r - p.row]);
                 }
                 else
                 {
                     for (int c = p.column; c < p.column + p.Length; c++)
-                        if (gameboard[p.row, c].stack_value >= 5)
+                        if (gameboard.board[p.row, c].stack_value >= 5)
                             words.RemoveAll(x => x[c - p.column] != p.word[c - p.column]);
                 }
 
@@ -1011,7 +991,8 @@ namespace UpwordsAI
         private void ResetGame()
         {
             AI.ResetTileHand(); // Clear the AI's tile hand
-            ClearGameboard(); // Clear game board
+            gameboard.Reset(); // Clear game board
+            firstturn = true; // Set firstturn
             tile_bag.Reset(); // Reset tile bag
             AI.GrabTiles(tile_bag); // Hand AI tiles
 
@@ -1036,7 +1017,7 @@ namespace UpwordsAI
                 delegate()
                 {
                     SetAITournamentTiles(g.myPayload.Letters);
-                    SetAIBoardState(g.myPayload.Board);
+                    SetBoardState(g.myPayload.Board);
                     myID = g.myPayload.ID;
                     turn = g.myPayload.Turn;
                 });
@@ -1058,7 +1039,7 @@ namespace UpwordsAI
 
                     if (turn != g.myPayload.Turn)
                     {
-                        SetAIBoardState(g.myPayload.Board);
+                        SetBoardState(g.myPayload.Board);
                         turn = g.myPayload.Turn;
                         if (tournamentscoreLBL.InvokeRequired)
                             tournamentscoreLBL.Invoke(new MethodInvoker(delegate { tournamentscoreLBL.Text = "T Score: " + g.myPayload.Score.ToString(); }));
@@ -1088,7 +1069,7 @@ namespace UpwordsAI
             //g.GetGamestateUntilTurn().GetAwaiter().OnCompleted(delegate() // Gets gamestate continuously until its your turn
             {
                 SetAITournamentTiles(g.myPayload.Letters);
-                SetAIBoardState(g.myPayload.Board);
+                SetBoardState(g.myPayload.Board);
                 turn = g.myPayload.Turn;
                 logboxTB.Text += "Game state successfully retrieved.\r\n";
                 logboxTB.Text += "It is currently user " + g.myPayload.Turn.ToString() + "'s turn.\r\n";
@@ -1112,24 +1093,13 @@ namespace UpwordsAI
         ///                     Should be a 3D array where the first dimension switches between letter (0) and stack (1).
         ///                     The other two dimensions correspond to board position.
         /// </param>
-        private void SetAIBoardState(string[,,] board)
+        private void SetBoardState(string[,,] board)
         {
-            if (board != null) // If we've received a valid board
-            {
-                for (int r = 0; r < 10; r++) // Loop through all rows
-                {
-                    for (int c = 0; c < 10; c++) // Loop through each column for each row
-                    {
-                        char letter = (board[0, r, c] != null) ? board[0, r, c][0] : BLANK_LETTER;  // If the letter is NULL, set it to BLANK. Otherwise set it to the letter it represents.
-                        sbyte stack_level = sbyte.Parse(board[1, r, c] ?? "0"); // If the stack level is NULL, set it to 0. Else, parse whatever it is and set it.
-                        gameboard[r, c].DrawTile(letter, stack_level);  // Set tile letter and stack level, draw the tile.
-                    }
-                }
-            }
+            gameboard.SetTournamentState(board);
 
             if (firstturn) // If we believe it's our first turn, then verify it truly is.
             {
-                foreach (GraphicTile tile in gameboard)
+                foreach (GraphicTile tile in gameboard.board)
                 {
                     if (!tile.IsBlank)   // If any tiles are filled
                     {
@@ -1178,7 +1148,7 @@ namespace UpwordsAI
                         int rstart = -1, rend = -1, cstart = -1, cend = -1; // Used to keep track of the starting/ending position of a word
                         int[] pos = { r, c };
 
-                        if (!gameboard[r, c].IsBlank) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
+                        if (!gameboard.board[r, c].IsBlank) // We're only interested in tiles with a letter on them, because we can build words off of tiles with letters
                         {
                             SearchUpward(pos, out List<int> rows, out List<char> rschars, out rstart); // Search in all four directions of the tile and record what we see
                             SearchDownward(pos, out List<int> rowe, out List<char> rechars, out rend); // as well as record valid data needed for word placement
@@ -1187,7 +1157,7 @@ namespace UpwordsAI
 
                             if (rstart != -1 && rend != -1 && rstart != rend) // If we can make a vertical word
                             {
-                                PossibleWordPlacements.Add(new PossibleWordPlacement(true, gameboard[r, c].letter_value, gameboard[r, c].stack_value, r, c, rstart, rend)); // Add the word to the list of possible word plays
+                                PossibleWordPlacements.Add(new PossibleWordPlacement(true, gameboard.board[r, c].letter_value, gameboard.board[r, c].stack_value, r, c, rstart, rend)); // Add the word to the list of possible word plays
 
                                 List<char> lets = new List<char>(); lets.AddRange(rschars); lets.AddRange(rechars);
                                 NewPossibleWordPlacements.Add(new NewPossibleWordPlacement(true, lets, r, c, rows, rowe));
@@ -1195,7 +1165,7 @@ namespace UpwordsAI
 
                             if (cstart != -1 && cend != -1 && cstart != cend) // If we can make a horizontal word
                             {
-                                PossibleWordPlacements.Add(new PossibleWordPlacement(false, gameboard[r, c].letter_value, gameboard[r, c].stack_value, r, c, cstart, cend)); // Add the word to the list of possible word plays
+                                PossibleWordPlacements.Add(new PossibleWordPlacement(false, gameboard.board[r, c].letter_value, gameboard.board[r, c].stack_value, r, c, cstart, cend)); // Add the word to the list of possible word plays
 
                                 List<char> lets = new List<char>(); lets.AddRange(cschars); lets.AddRange(cechars);
                                 NewPossibleWordPlacements.Add(new NewPossibleWordPlacement(false, lets, r, c, cols, cole));
@@ -1259,13 +1229,13 @@ namespace UpwordsAI
                     if (p.dir) // This if statement will prevent any words that would cause a stack level higher than 5 from being played.
                     {           // NOTE: Why are any words that would cause a stack level >= 5 even being added in the first place?!?!
                         for (int r = p.row; r < p.row + p.Length; r++)
-                            if (gameboard[r, p.column].stack_value >= 5)
+                            if (gameboard.board[r, p.column].stack_value >= 5)
                                 words.RemoveAll(x => x[r - p.row] != p.word[r - p.row]);
                     }
                     else
                     {
                         for (int c = p.column; c < p.column + p.Length; c++)
-                            if (gameboard[p.row, c].stack_value >= 5)
+                            if (gameboard.board[p.row, c].stack_value >= 5)
                                 words.RemoveAll(x => x[c - p.column] != p.word[c - p.column]);
                     }
 
